@@ -62,6 +62,7 @@ export default function StandingsPage() {
                     {row.name}
                     {row.status === 'winner' && ' 🏆'}
                     {row.userId === userId && <span className="you-tag">you</span>}
+                    {!row.paid && <span className="unpaid-tag">unpaid</span>}
                   </div>
                   <div className="standing-status">{row.statusLabel}</div>
                 </div>

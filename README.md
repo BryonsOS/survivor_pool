@@ -85,6 +85,24 @@ clearing `survivor_picks` and `survivor_results`.
 The wrestling repo's keepalive workflow already pings this database twice a week, so no
 second keepalive is needed.
 
+## Entry fees
+
+The site never touches money. Players pay the commissioner directly through whatever
+link is configured; the commissioner marks them paid, and the app does the bookkeeping:
+
+- An unpaid player sees what they owe on their pick page, with a **Pay now** button
+  pointing at the configured link (Venmo, Cash App, PayPal — anything http(s)).
+- **Admin → Entry fees** shows collected, outstanding, unpaid count, and the full pot,
+  and is where the handle, link, and instructions are set.
+- Marking someone paid stamps `paid_at`, so "who paid and when" is answerable later.
+  Un-marking clears the stamp and any note.
+- Optionally, **unpaid players can be blocked from locking a pick**. That rule is
+  enforced by a database trigger, not the UI, so it holds however a pick is submitted.
+  It is off by default.
+
+Payment links are validated: only `http:` and `https:` URLs are rendered, so a stray
+`javascript:` value cannot end up in an href on every player's page.
+
 ## Development
 
 ```bash

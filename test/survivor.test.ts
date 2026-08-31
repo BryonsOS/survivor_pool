@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { availableTeams, buildPool, buildRules } from '../src/lib/survivor.ts'
+import { safePaymentUrl } from '../src/lib/payments.ts'
 import type { PoolInput } from '../src/lib/survivor.ts'
 import type { PoolSettings, Team } from '../src/lib/types.ts'
 
@@ -25,6 +26,10 @@ const settings: PoolSettings = {
   entry_fee: 20,
   pick_deadline_label: 'Sunday 1:00 PM ET',
   payout_note: 'Winner takes the pot.',
+  payment_handle: null,
+  payment_url: null,
+  payment_instructions: 'Pay the commissioner your entry fee before Week 1.',
+  require_payment_to_pick: false,
 }
 
 const profiles = [
@@ -34,7 +39,9 @@ const profiles = [
   { id: 'd', display_name: 'Dan', is_admin: false },
 ]
 
-const entrants = profiles.map((p) => ({ user_id: p.id, joined_at: '', paid: true }))
+const entrants = profiles.map((p) => ({
+  user_id: p.id, joined_at: '', paid: true, paid_at: null, payment_note: null,
+}))
 
 let pickId = 0
 const pick = (user_id: string, week: number, team: string | null, is_bye = false) => ({
@@ -257,4 +264,54 @@ test('the posted rules follow the settings', () => {
   assert.ok(double.some((r) => r.body.includes('No BYE weeks')))
   assert.ok(double.some((r) => r.body.includes('No buy-backs')))
   assert.ok(double.some((r) => r.body.includes('$20 to enter')))
+})
+
+
+test('entry-fee totals split collected from outstanding', () => {
+  // two of four have paid, at $20 each
+  const half = entrants.map((e, i) => ({ ...e, paid: i < 2 }))
+  const state = buildPool(base({ entrants: half }))
+  assert.equal(state.potLabel, '$80', 'full pot counts everyone')
+  assert.equal(state.collectedLabel, '$40')
+  assert.equal(state.outstandingLabel, '$40')
+  assert.equal(state.unpaidCount, 2)
+})
+
+test('a fully paid pool shows nothing outstanding', () => {
+  const state = buildPool(base())
+  assert.equal(state.collectedLabel, '$80')
+  assert.equal(state.outstandingLabel, '$0')
+  assert.equal(state.unpaidCount, 0)
+})
+
+test('each standing carries its own paid status', () => {
+  const mixed = entrants.map((e) => ({ ...e, paid: e.user_id === 'a' }))
+  const s = by(base({ entrants: mixed }))
+  assert.equal(s.Alice.paid, true)
+  assert.equal(s.Bob.paid, false)
+})
+
+test('the posted rules explain how to pay', () => {
+  const rules = buildRules({
+    ...settings,
+    payment_handle: '@Bryon-Romp',
+    require_payment_to_pick: true,
+  }, 32)
+  const paying = rules.find((r) => r.title === 'Paying your entry')
+  assert.ok(paying, 'there is a payment rule')
+  assert.ok(paying!.body.includes('@Bryon-Romp'), 'it names the handle')
+  assert.ok(paying!.body.includes('locked'), 'it warns that picks are locked')
+
+  const relaxed = buildRules(settings, 32).find((r) => r.title === 'Paying your entry')
+  assert.ok(!relaxed!.body.includes('locked'), 'no lock warning when picks stay open')
+})
+
+test('only http(s) payment links are rendered', () => {
+  assert.equal(safePaymentUrl('https://venmo.com/u/Bryon'), 'https://venmo.com/u/Bryon')
+  assert.equal(safePaymentUrl('http://cash.app/$Bryon'), 'http://cash.app/$Bryon')
+  assert.equal(safePaymentUrl('javascript:alert(1)'), null, 'script URLs are refused')
+  assert.equal(safePaymentUrl('data:text/html,<script>'), null)
+  assert.equal(safePaymentUrl('not a url'), null)
+  assert.equal(safePaymentUrl(null), null)
+  assert.equal(safePaymentUrl(''), null)
 })

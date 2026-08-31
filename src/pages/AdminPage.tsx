@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { usePool } from '../context/PoolContext'
 import { formatDeadline, toDatetimeLocal } from '../lib/time'
+import { safePaymentUrl } from '../lib/payments'
 import type { Outcome, Week, WeekStatus } from '../lib/types'
 
 export default function AdminPage() {
@@ -215,6 +216,105 @@ export default function AdminPage() {
       )}
 
       <section className="admin-block">
+        <h2 className="admin-heading">Entry fees</h2>
+        <div className="money-row">
+          <div className="money-cell in">
+            <div className="money-value">{pool?.collectedLabel ?? '$0'}</div>
+            <div className="money-label">Collected</div>
+          </div>
+          <div className="money-cell owed">
+            <div className="money-value">{pool?.outstandingLabel ?? '$0'}</div>
+            <div className="money-label">Outstanding</div>
+          </div>
+          <div className="money-cell">
+            <div className="money-value">{pool?.unpaidCount ?? 0}</div>
+            <div className="money-label">Unpaid</div>
+          </div>
+          <div className="money-cell">
+            <div className="money-value">{pool?.potLabel ?? '$0'}</div>
+            <div className="money-label">Full pot</div>
+          </div>
+        </div>
+
+        <p className="muted small">
+          Players see a "pay now" button using the link below. Nothing is charged here — they pay
+          you directly, and you mark them paid.
+        </p>
+        <div className="settings-grid">
+          <label>
+            Payment handle (shown to players)
+            <input
+              defaultValue={settings.payment_handle ?? ''}
+              placeholder="@Bryon-Romp"
+              disabled={busy}
+              onBlur={(e) =>
+                run('Payment handle updated', () =>
+                  supabase
+                    .from('survivor_settings')
+                    .update({ payment_handle: e.target.value.trim() || null })
+                    .eq('id', true),
+                )
+              }
+            />
+          </label>
+          <label>
+            Payment link
+            <input
+              defaultValue={settings.payment_url ?? ''}
+              placeholder="https://venmo.com/u/Bryon-Romp"
+              disabled={busy}
+              onBlur={(e) => {
+                const value = e.target.value.trim()
+                if (value && !safePaymentUrl(value)) {
+                  setError('That payment link is not a valid http(s) URL, so it was not saved.')
+                  return
+                }
+                run('Payment link updated', () =>
+                  supabase
+                    .from('survivor_settings')
+                    .update({ payment_url: value || null })
+                    .eq('id', true),
+                )
+              }}
+            />
+          </label>
+          <label>
+            Unpaid players can pick
+            <select
+              value={String(!settings.require_payment_to_pick)}
+              disabled={busy}
+              onChange={(e) =>
+                run('Payment rule updated', () =>
+                  supabase
+                    .from('survivor_settings')
+                    .update({ require_payment_to_pick: e.target.value === 'false' })
+                    .eq('id', true),
+                )
+              }
+            >
+              <option value="true">yes — picks stay open</option>
+              <option value="false">no — lock picks until paid</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          Instructions shown to unpaid players
+          <input
+            defaultValue={settings.payment_instructions}
+            disabled={busy}
+            onBlur={(e) =>
+              run('Payment instructions updated', () =>
+                supabase
+                  .from('survivor_settings')
+                  .update({ payment_instructions: e.target.value.trim() })
+                  .eq('id', true),
+              )
+            }
+          />
+        </label>
+      </section>
+
+      <section className="admin-block">
         <h2 className="admin-heading">Entrants ({entrants.length})</h2>
         {entrants.length === 0 ? (
           <p className="muted small">Nobody has joined yet.</p>
@@ -227,6 +327,14 @@ export default function AdminPage() {
                   <div>
                     <strong>{row.name}</strong>
                     <div className="muted small">{row.statusLabel}</div>
+                    {entrant?.paid && entrant.paid_at && (
+                      <div className="paid-when">
+                        Paid {new Date(entrant.paid_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </div>
+                    )}
                   </div>
                   <button
                     className={`btn btn-sm ${entrant?.paid ? 'btn-primary' : 'btn-secondary'}`}

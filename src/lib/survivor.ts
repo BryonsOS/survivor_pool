@@ -36,12 +36,18 @@ export interface PoolState {
   currentWeek: Week | null
   weeksGraded: number
   potLabel: string
+  /** Entry fees actually marked received. */
+  collectedLabel: string
+  /** Entry fees still owed. */
+  outstandingLabel: string
+  unpaidCount: number
   formatLabel: string
 }
 
 interface Ledger {
   userId: string
   name: string
+  paid: boolean
   strikes: number
   eliminated: boolean
   eliminatedWeek: number | null
@@ -85,6 +91,7 @@ export function buildPool(input: PoolInput): PoolState {
       {
         userId: entrant.user_id,
         name: nameById.get(entrant.user_id) ?? 'Unknown member',
+        paid: entrant.paid,
         strikes: 0,
         eliminated: false,
         eliminatedWeek: null,
@@ -146,6 +153,9 @@ export function buildPool(input: PoolInput): PoolState {
     currentWeek,
     weeksGraded,
     potLabel: formatMoney(settings.entry_fee * standings.length),
+    collectedLabel: formatMoney(settings.entry_fee * standings.filter((r) => r.paid).length),
+    outstandingLabel: formatMoney(settings.entry_fee * standings.filter((r) => !r.paid).length),
+    unpaidCount: standings.filter((r) => !r.paid).length,
     formatLabel:
       settings.strikes_to_eliminate > 1
         ? `Double elimination · ${settings.strikes_to_eliminate} strikes`
@@ -266,6 +276,7 @@ function finalize(
     byesUsed: ledger.byesUsed,
     byesRemaining: Math.max(0, settings.bye_weeks_per_player - ledger.byesUsed),
     currentPick: current?.team ?? null,
+    paid: ledger.paid,
     lastOutcomeLabel: lastGraded
       ? `Week ${lastGraded.week} · ${lastGraded.label}`
       : 'No graded week yet.',
@@ -359,6 +370,18 @@ export function buildRules(settings: PoolSettings, teamCount: number) {
     {
       title: 'Entry and payout',
       body: `${formatMoney(settings.entry_fee)} to enter. ${settings.payout_note}`,
+    },
+    {
+      title: 'Paying your entry',
+      body: [
+        settings.payment_instructions,
+        settings.payment_handle ? `Send it to ${settings.payment_handle}.` : null,
+        settings.require_payment_to_pick
+          ? 'Picks are locked until your entry fee is recorded.'
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' '),
     },
   ]
 }

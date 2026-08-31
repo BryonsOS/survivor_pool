@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { usePool } from '../context/PoolContext'
+import PaymentNotice from '../components/PaymentNotice'
 import { countdownText, formatDeadline, formatKickoff } from '../lib/time'
 import type { Game, Team } from '../lib/types'
 
@@ -106,7 +107,9 @@ export default function PickPage() {
         writeError.code === '23505'
           ? `You have already used ${team.name} this season. Teams are one-time use.`
           : writeError.code === '23514'
-            ? `${team.name} are on a bye in Week ${week.week} — they cannot win, so the pick was rejected.`
+            ? writeError.message.includes('Entry fee')
+              ? 'Your entry fee has not been recorded yet, so picks are locked. Pay the commissioner and they will unlock it.'
+              : `${team.name} are on a bye in Week ${week.week} — they cannot win, so the pick was rejected.`
             : writeError.message,
       )
       return
@@ -134,6 +137,8 @@ export default function PickPage() {
         </div>
         <div className="muted">Deadline {formatDeadline(week.locks_at)}</div>
       </div>
+
+      {entered && me && !me.paid && <PaymentNotice settings={settings} />}
 
       {!entered && (
         <div className="alert alert-error">

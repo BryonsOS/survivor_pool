@@ -23,6 +23,10 @@ export interface PoolSettings {
   entry_fee: number
   pick_deadline_label: string
   payout_note: string
+  payment_handle: string | null
+  payment_url: string | null
+  payment_instructions: string
+  require_payment_to_pick: boolean
 }
 
 export interface Team {
@@ -36,6 +40,8 @@ export interface Entrant {
   user_id: string
   joined_at: string
   paid: boolean
+  paid_at: string | null
+  payment_note: string | null
 }
 
 export interface Week {
@@ -113,6 +119,7 @@ export interface Standing {
   byesUsed: number
   byesRemaining: number
   currentPick: string | null
+  paid: boolean
   lastOutcomeLabel: string
   history: PickHistoryEntry[]
 }

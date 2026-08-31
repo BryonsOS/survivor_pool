@@ -384,3 +384,39 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
   border: 1px solid var(--border); background: var(--bg);
   color: var(--green); font-size: 13px; overflow-x: auto; white-space: pre;
 }
+
+/* ---------- payments ---------- */
+.payment-notice {
+  display: flex; flex-direction: column; gap: 9px; padding: 14px;
+  border-radius: var(--radius); border: 1px solid var(--amber);
+  background: rgba(240, 169, 46, 0.1);
+}
+.payment-notice-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.payment-amount {
+  font-family: var(--font-display); font-weight: 800; font-size: 20px;
+  letter-spacing: 0.02em; color: var(--amber);
+}
+.payment-status {
+  font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.1em;
+  font-size: 11px; color: var(--text-dim);
+}
+.payment-copy { margin: 0; font-size: 14px; color: var(--text-dim); }
+.payment-notice .btn { align-self: flex-start; }
+.unpaid-tag {
+  font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.1em;
+  font-size: 10px; color: var(--amber); border: 1px solid var(--amber);
+  border-radius: 999px; padding: 1px 7px;
+}
+.money-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.money-cell {
+  padding: 11px 13px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--bg-raise);
+}
+.money-value { font-family: var(--font-display); font-size: 22px; font-weight: 800; line-height: 1; }
+.money-cell.owed .money-value { color: var(--amber); }
+.money-cell.in .money-value { color: var(--green); }
+.money-label {
+  font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+  letter-spacing: 0.1em; margin-top: 5px;
+}
+.paid-when { font-size: 11px; color: var(--text-dim); }

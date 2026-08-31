@@ -43,6 +43,10 @@ const SETTINGS = {
   allow_buy_backs: false, buy_back_fee: 0, missed_pick_policy: 'strike',
   entry_fee: 25, pick_deadline_label: 'the first kickoff of each week',
   payout_note: 'Winner takes the pot. If more than one player is still alive after the final week, survivors split evenly.',
+  payment_handle: '@Bryon-Romp',
+  payment_url: 'https://venmo.com/u/Bryon-Romp',
+  payment_instructions: 'Venmo your entry fee to the commissioner before Week 1.',
+  require_payment_to_pick: false,
 }
 
 // Real 2026 games for weeks 9-11, so the board shows true opponents and byes.
@@ -125,7 +129,8 @@ const PICKS = [
 ]
 
 const ENTRANTS = PROFILES.map((pr, i) => ({
-  user_id: pr.id, joined_at: '2026-09-01T00:00:00Z', paid: i < 3,
+  user_id: pr.id, joined_at: '2026-09-01T00:00:00Z', paid: i > 0,
+  paid_at: i > 0 ? '2026-09-02T15:00:00Z' : null, payment_note: null,
 }))
 
 function jwt(sub) {
