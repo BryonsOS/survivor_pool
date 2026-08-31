@@ -92,9 +92,11 @@ npm install
 npm run dev
 ```
 
-Connection details go in `.env` (copy `.env.example`). `VITE_SUPABASE_ANON_KEY` is a
-publishable client key — it ships in the bundle by design, and RLS is what protects the
-data.
+No configuration is needed to run or deploy this: the Supabase URL and publishable key
+are committed as defaults in `src/lib/supabase.ts`. Both are inlined into the JavaScript
+bundle by Vite, so they are public either way — RLS is what protects the data. Set
+`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` only to point a build at a different
+Supabase project.
 
 ```bash
 npm test     # the scoring engine: strikes, ties, eliminations, BYEs, champion detection

@@ -1,29 +1,29 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+/**
+ * Connection defaults, committed on purpose.
+ *
+ * Both values are *publishable* client credentials: Vite inlines them into the
+ * JavaScript bundle, so they are visible to anyone who opens the site either way.
+ * Row-level security in Postgres is what actually protects the data — these only
+ * identify which project to talk to. Baking them in means the site builds and runs
+ * anywhere with no deploy-time configuration.
+ *
+ * Set VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY to point a build at a different
+ * Supabase project (a staging copy, or a future season on its own database).
+ */
+const DEFAULT_URL = 'https://cnchsowyukaioujfrups.supabase.co'
+const DEFAULT_ANON_KEY = 'sb_publishable_mQPA6yhSEzwr1wflWoserQ_eaXFsdcU'
 
-const missing = [
-  !url && 'VITE_SUPABASE_URL',
-  !key && 'VITE_SUPABASE_ANON_KEY',
-].filter(Boolean) as string[]
+const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || DEFAULT_URL
+const key = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || DEFAULT_ANON_KEY
 
 /**
- * Missing config used to `throw` right here, at module-import time — which runs
- * before React mounts, so the ErrorBoundary never saw it and the page rendered
- * blank with no clue why. Report it as a value instead and let the app show the
- * reader what to fix.
- *
- * These are build-time values: Vite inlines them into the bundle, so a deploy
- * built without them stays broken until they are set and the site is rebuilt.
+ * Only reachable if the defaults above are removed. Kept because the previous
+ * version threw here at module-import time — before React mounted, so the error
+ * boundary never saw it and the deployed site rendered as a blank page.
  */
-export const configError: string | null = missing.length
-  ? `${missing.join(' and ')} ${missing.length > 1 ? 'were' : 'was'} not set when this site was built.`
-  : null
+export const configError: string | null =
+  !url || !key ? 'The Supabase connection is not configured for this build.' : null
 
-// Placeholders keep createClient from throwing. Nothing is reachable through them,
-// but the app gets to render the setup screen instead of dying on import.
-export const supabase = createClient(
-  url || 'https://placeholder.supabase.co',
-  key || 'placeholder-key',
-)
+export const supabase = createClient(url, key)
