@@ -20,6 +20,8 @@ the enforcement, static SPA on Netlify. There is no server code.
 - **Scoring.** A win advances you. A loss is a strike. A tie survives by default. A missed
   pick is a strike. You are eliminated on your second strike. Last player standing wins.
 - **One-time use.** Every pick burns that team for the rest of the season, win or lose.
+- **Opponents and byes.** The full 2026 schedule is loaded, so the board shows each team's
+  opponent and kickoff, and teams on their bye are unpickable — they cannot win.
 
 ## Rules are settings, not code
 
@@ -40,7 +42,7 @@ publishable key; policies decide what it may see and write.
 | `survivor_invite` | **no access** | read/update |
 | `survivor_teams` | read | read |
 | `survivor_entrants` | entrants read the roster | full control |
-| `survivor_weeks` / `survivor_results` | entrants read | full control |
+| `survivor_weeks` / `survivor_results` / `survivor_games` | entrants read | full control |
 | `survivor_picks` | write own **only while that week is open**; see others' only once the week is locked | full control |
 
 Two rules are enforced by constraints rather than policies, so they hold even if the UI is
@@ -49,6 +51,8 @@ bypassed:
 - `survivor_picks_one_time_use` — a partial unique index on `(user_id, team)` makes it
   physically impossible to use the same team twice in a season.
 - `survivor_pick_shape` — a pick is either a team or a BYE, never both and never neither.
+- `survivor_picks_playable` — a trigger rejects any pick for a team that has no game that
+  week, so a bye-week team cannot be picked even by a client that skips the UI.
 
 Signups run through the shared `handle_new_user` trigger, which accepts either the
 wrestling code or the survivor code and enrols survivor signups in the pool. An unknown
@@ -61,8 +65,18 @@ running its own, because the free tier allows two active projects and both were 
 Everything here is prefixed `survivor_` and touches no existing table; identity is reused
 from `public.profiles`, which is why one login works for both sites.
 
-`supabase/migrations/001_survivor_schema.sql` is the applied schema, kept for reference and
-disaster recovery.
+`supabase/migrations/001_survivor_schema.sql` is the applied schema and
+`002_schedule.sql` loads the 2026 season, both kept for reference and disaster recovery.
+
+## The schedule
+
+All 272 regular-season games are in `survivor_games`, parsed from the league's published
+2026 schedule PDF and checked on import: 272 games, every team plays 17, no team appears
+twice in a week, and all 32 teams have exactly one bye (byes run weeks 5–14).
+
+Games the NFL has not flexed yet — 4 in Week 16, 4 in Week 17, and all 16 of Week 18 —
+have a known matchup but a null `kickoff_at`. The board shows those as "time TBD". When the
+league sets them, update `kickoff_at` and the week's `locks_at`.
 
 The season is single-year by design: `survivor_weeks.week` is the primary key and the
 one-time-use index spans the whole table. Starting a new season means archiving and
@@ -99,8 +113,11 @@ SHOT_DIR=/tmp node uicheck.mjs
 ## Commissioner notes
 
 - The invite code is in **Admin → Invite Code** (initial code: `SURVIVE2026`).
-- Week 1 ships open; the rest are upcoming. Deadlines are seeded to 1:00 PM ET each week
-  and stored as `timestamptz`, so they stay at 1:00 PM after daylight saving ends.
+- Week 1 ships open; the rest are upcoming.
+- Each week locks at **its own first kickoff**, so nobody can pick after seeing a result.
+  For most weeks that is Thursday night; Week 1 is Wednesday Sept 9, and Week 18 uses the
+  earliest slot the league printed (Sat Jan 9) until those games are scheduled. Any week's
+  deadline can be overridden in Admin → Weeks.
 - Marking a week **final** automatically opens the next one.
 - Only teams somebody actually picked appear in the results list — you never enter 32
   results for a week.

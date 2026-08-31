@@ -9,13 +9,14 @@ import {
 } from 'react'
 import { supabase } from '../lib/supabase'
 import { buildPool, type PoolState } from '../lib/survivor'
-import type { Entrant, PickRow, PoolSettings, Profile, Result, Team, Week } from '../lib/types'
+import type { Entrant, Game, PickRow, PoolSettings, Profile, Result, Team, Week } from '../lib/types'
 
 interface PoolData {
   settings: PoolSettings | null
   teams: Team[]
   weeks: Week[]
   results: Result[]
+  games: Game[]
   entrants: Entrant[]
   profiles: Profile[]
   picks: PickRow[]
@@ -30,6 +31,7 @@ const PoolContext = createContext<PoolData>({
   teams: [],
   weeks: [],
   results: [],
+  games: [],
   entrants: [],
   profiles: [],
   picks: [],
@@ -44,6 +46,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
   const [teams, setTeams] = useState<Team[]>([])
   const [weeks, setWeeks] = useState<Week[]>([])
   const [results, setResults] = useState<Result[]>([])
+  const [games, setGames] = useState<Game[]>([])
   const [entrants, setEntrants] = useState<Entrant[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [picks, setPicks] = useState<PickRow[]>([])
@@ -52,7 +55,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     setError(null)
-    const [s, t, w, r, e, p, k] = await Promise.all([
+    const [s, t, w, r, e, p, k, g] = await Promise.all([
       supabase.from('survivor_settings').select('*').maybeSingle(),
       supabase.from('survivor_teams').select('*').order('conference').order('division').order('name'),
       supabase.from('survivor_weeks').select('*').order('week'),
@@ -62,9 +65,10 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       // RLS returns only what the viewer may see: their own picks always, plus
       // everyone's once a week is locked or final.
       supabase.from('survivor_picks').select('*'),
+      supabase.from('survivor_games').select('*').order('week').order('kickoff_at', { nullsFirst: false }),
     ])
 
-    const firstError = [s, t, w, r, e, p, k].find((res) => res.error)?.error
+    const firstError = [s, t, w, r, e, p, k, g].find((res) => res.error)?.error
     if (firstError) setError(firstError.message)
 
     setSettings((s.data as PoolSettings) ?? null)
@@ -74,6 +78,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
     setEntrants((e.data as Entrant[]) ?? [])
     setProfiles((p.data as Profile[]) ?? [])
     setPicks((k.data as PickRow[]) ?? [])
+    setGames((g.data as Game[]) ?? [])
     setLoading(false)
   }, [])
 
@@ -88,7 +93,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
 
   return (
     <PoolContext.Provider
-      value={{ settings, teams, weeks, results, entrants, profiles, picks, pool, loading, error, reload }}
+      value={{ settings, teams, weeks, results, games, entrants, profiles, picks, pool, loading, error, reload }}
     >
       {children}
     </PoolContext.Provider>

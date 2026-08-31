@@ -44,6 +44,18 @@ export interface Week {
   status: WeekStatus
 }
 
+export interface Game {
+  id: string
+  week: number
+  away: string
+  home: string
+  neutral_site: boolean
+  /** null when the league has not scheduled the kickoff yet (late-season flex). */
+  kickoff_at: string | null
+  tv: string | null
+  note: string | null
+}
+
 export interface Result {
   week: number
   team: string

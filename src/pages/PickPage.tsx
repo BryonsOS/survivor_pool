@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { usePool } from '../context/PoolContext'
-import { countdownText, formatDeadline } from '../lib/time'
-import type { Team } from '../lib/types'
+import { countdownText, formatDeadline, formatKickoff } from '../lib/time'
+import type { Game, Team } from '../lib/types'
 
 export default function PickPage() {
   const { session } = useAuth()
   const userId = session!.user.id
-  const { settings, teams, pool, picks, loading, error, reload } = usePool()
+  const { settings, teams, games, pool, picks, loading, error, reload } = usePool()
   const [now, setNow] = useState(() => Date.now())
   const [saving, setSaving] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -45,6 +45,28 @@ export default function PickPage() {
     }
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   }, [teams])
+
+  // This week's game for each team. A team with no entry is on its bye, which means
+  // it cannot win — the database rejects those picks too.
+  const gameByTeam = useMemo(() => {
+    const map = new Map<string, Game>()
+    if (!week) return map
+    for (const game of games) {
+      if (game.week !== week.week) continue
+      map.set(game.home, game)
+      map.set(game.away, game)
+    }
+    return map
+  }, [games, week])
+
+  function matchup(team: Team, game: Game | undefined) {
+    if (!game) return 'BYE week'
+    const home = game.home === team.abbr
+    const foe = home ? game.away : game.home
+    const prefix = game.neutral_site ? 'vs' : home ? 'vs' : '@'
+    const when = formatKickoff(game.kickoff_at)
+    return `${prefix} ${foe}${when ? ` · ${when}` : ' · time TBD'}`
+  }
 
   if (loading) return <div className="page-loading">Loading the board…</div>
   if (error) return <div className="page"><div className="alert alert-error">{error}</div></div>
@@ -82,7 +104,9 @@ export default function PickPage() {
       setFailure(
         writeError.code === '23505'
           ? `You have already used ${team.name} this season. Teams are one-time use.`
-          : writeError.message,
+          : writeError.code === '23514'
+            ? `${team.name} are on a bye in Week ${week.week} — they cannot win, so the pick was rejected.`
+            : writeError.message,
       )
       return
     }
@@ -137,6 +161,16 @@ export default function PickPage() {
           <div className="current-pick-team">
             {myPick.is_bye ? 'BYE week' : teams.find((t) => t.abbr === myPick.team)?.name ?? myPick.team}
           </div>
+          {!myPick.is_bye && myPick.team && gameByTeam.get(myPick.team) && (
+            <div className="current-pick-game">
+              {matchup(
+                teams.find((t) => t.abbr === myPick.team) ?? {
+                  abbr: myPick.team, name: myPick.team, conference: '', division: '',
+                },
+                gameByTeam.get(myPick.team),
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -157,7 +191,7 @@ export default function PickPage() {
         <>
           <p className="board-help">
             Teams you have already used are greyed out — every pick burns that team for the rest of
-            the season, win or lose.
+            the season, win or lose. Teams on their bye cannot be picked.
           </p>
           <div className="team-board">
             {grouped.map(([division, list]) => (
@@ -165,19 +199,31 @@ export default function PickPage() {
                 <h2 className="division-name">{division}</h2>
                 <div className="division-teams">
                   {list.map((team) => {
+                    const game = gameByTeam.get(team.abbr)
+                    const onBye = !game
                     const used = usedAbbrs.has(team.abbr)
                     const selected = myPick?.team === team.abbr
                     return (
                       <button
                         key={team.abbr}
-                        className={`team-btn${selected ? ' selected' : ''}${used ? ' used' : ''}`}
-                        disabled={used || saving !== null}
+                        className={`team-btn${selected ? ' selected' : ''}${used || onBye ? ' used' : ''}`}
+                        disabled={used || onBye || saving !== null}
                         onClick={() => choose(team)}
-                        title={used ? `${team.name} already used` : `Pick ${team.name}`}
+                        title={
+                          onBye
+                            ? `${team.name} are on a bye this week`
+                            : used
+                              ? `${team.name} already used`
+                              : `Pick ${team.name} — ${matchup(team, game)}`
+                        }
                       >
                         <span className="team-abbr">{team.abbr}</span>
-                        <span className="team-name">{team.name}</span>
-                        {used && <span className="team-flag">used</span>}
+                        <span className="team-lines">
+                          <span className="team-name">{team.name}</span>
+                          <span className="team-matchup">{matchup(team, game)}</span>
+                        </span>
+                        {onBye && <span className="team-flag">bye</span>}
+                        {!onBye && used && <span className="team-flag">used</span>}
                         {selected && <span className="team-flag picked">picked</span>}
                         {saving === team.abbr && <span className="team-flag">saving…</span>}
                       </button>

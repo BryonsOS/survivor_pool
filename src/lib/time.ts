@@ -45,3 +45,17 @@ export function toDatetimeLocal(iso: string | null): string {
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '00'
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
 }
+
+/** Short kickoff label for the pick board: "Sun 1:00p", "Thu 8:15p". */
+export function formatKickoff(iso: string | null): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const parts = date.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+  return parts.replace(' AM', 'a').replace(' PM', 'p').replace(',', '')
+}
