@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
  * Signed in, but not enrolled in this pool — the path an existing fantasy-wrestling
  * member takes. They already have an account; they just need the pool's invite code.
  */
-export default function JoinPage() {
+export default function JoinPage({ onManageOnly }: { onManageOnly?: () => void }) {
   const { profile, signOut, refresh } = useAuth()
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -38,8 +38,8 @@ export default function JoinPage() {
             Join the <em>Pool</em>
           </h1>
           <p>
-            You're signed in as {profile?.display_name ?? 'a member'}, but you're not in the survivor
-            pool yet. Enter the invite code to get in.
+            You're signed in as {profile?.display_name ?? 'a member'}, but you're not entered in the
+            survivor pool yet. Enter the invite code to get in.
           </p>
         </div>
 
@@ -60,6 +60,11 @@ export default function JoinPage() {
           <button type="submit" className="btn btn-primary btn-block" disabled={busy}>
             {busy ? 'Checking…' : 'Join the Pool'}
           </button>
+          {onManageOnly && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onManageOnly}>
+              I'm only running the pool — skip
+            </button>
+          )}
           <button type="button" className="btn btn-ghost btn-sm" onClick={signOut}>
             Sign out
           </button>

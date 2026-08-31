@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { configError } from './lib/supabase'
@@ -15,6 +16,7 @@ import SetupPage from './pages/SetupPage'
 
 export default function App() {
   const { session, profile, isEntrant, loading } = useAuth()
+  const [manageOnly, setManageOnly] = useState(false)
 
   // Built without its Supabase config — nothing below can work, so say so plainly.
   if (configError) {
@@ -40,9 +42,12 @@ export default function App() {
     return <AuthPage />
   }
 
-  // Signed in but not in this pool — e.g. an existing wrestling-league member.
-  if (!isEntrant && !profile?.is_admin) {
-    return <JoinPage />
+  // Signed in but not entered in this pool — e.g. an existing wrestling-league
+  // member. Admins land here too: being commissioner does not enter you in the
+  // pool, so they get the same invite-code screen plus a way past it if they are
+  // only running things.
+  if (!isEntrant && !manageOnly) {
+    return <JoinPage onManageOnly={profile?.is_admin ? () => setManageOnly(true) : undefined} />
   }
 
   return (

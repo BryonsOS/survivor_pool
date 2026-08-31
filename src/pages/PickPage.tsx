@@ -82,6 +82,7 @@ export default function PickPage() {
 
   const isOpen = week.status === 'open'
   const eliminated = me?.status === 'eliminated'
+  const entered = Boolean(me)
 
   async function choose(team: Team) {
     if (!week || !isOpen || eliminated) return
@@ -133,6 +134,13 @@ export default function PickPage() {
         </div>
         <div className="muted">Deadline {formatDeadline(week.locks_at)}</div>
       </div>
+
+      {!entered && (
+        <div className="alert alert-error">
+          You are not entered in the pool, so you have no pick to make. You can still manage
+          everything from the Admin tab, or sign out and rejoin with the invite code to play.
+        </div>
+      )}
 
       {eliminated && (
         <div className="alert alert-error">
@@ -187,7 +195,7 @@ export default function PickPage() {
         </div>
       )}
 
-      {isOpen && !eliminated && (
+      {isOpen && !eliminated && entered && (
         <>
           <p className="board-help">
             Teams you have already used are greyed out — every pick burns that team for the rest of
