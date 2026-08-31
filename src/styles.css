@@ -420,3 +420,6 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
   letter-spacing: 0.1em; margin-top: 5px;
 }
 .paid-when { font-size: 11px; color: var(--text-dim); }
+
+.standing-real-name { font-size: 12px; color: var(--text-dim); margin-top: 1px; }
+.admin-real-name { font-size: 12px; color: var(--text-dim); margin-left: 7px; }

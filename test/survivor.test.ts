@@ -315,3 +315,24 @@ test('only http(s) payment links are rendered', () => {
   assert.equal(safePaymentUrl(null), null)
   assert.equal(safePaymentUrl(''), null)
 })
+
+
+test('the real first name rides along with each standing', () => {
+  const s = by(base({
+    details: [
+      { user_id: 'a', real_name: 'Bryon' },
+      { user_id: 'b', real_name: '  Mike  ' },
+      { user_id: 'c', real_name: '' },
+    ],
+  }))
+  assert.equal(s.Alice.realName, 'Bryon')
+  assert.equal(s.Bob.realName, 'Mike', 'surrounding whitespace is trimmed')
+  assert.equal(s.Cara.realName, null, 'an empty name is treated as absent')
+  assert.equal(s.Dan.realName, null, 'a member with no row at all is fine')
+})
+
+test('standings work when no real names exist at all', () => {
+  const s = by(base())
+  assert.equal(s.Alice.realName, null)
+  assert.equal(s.Alice.name, 'Alice', 'the display name is untouched')
+})

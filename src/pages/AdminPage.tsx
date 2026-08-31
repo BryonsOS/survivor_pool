@@ -326,6 +326,7 @@ export default function AdminPage() {
                 <div key={row.userId} className="entrant-row">
                   <div>
                     <strong>{row.name}</strong>
+                    {row.realName && <span className="admin-real-name">{row.realName}</span>}
                     <div className="muted small">{row.statusLabel}</div>
                     {entrant?.paid && entrant.paid_at && (
                       <div className="paid-when">

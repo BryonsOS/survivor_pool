@@ -9,7 +9,9 @@ import {
 } from 'react'
 import { supabase } from '../lib/supabase'
 import { buildPool, type PoolState } from '../lib/survivor'
-import type { Entrant, Game, PickRow, PoolSettings, Profile, Result, Team, Week } from '../lib/types'
+import type {
+  Entrant, Game, MemberDetail, PickRow, PoolSettings, Profile, Result, Team, Week,
+} from '../lib/types'
 
 interface PoolData {
   settings: PoolSettings | null
@@ -19,6 +21,7 @@ interface PoolData {
   games: Game[]
   entrants: Entrant[]
   profiles: Profile[]
+  details: MemberDetail[]
   picks: PickRow[]
   pool: PoolState | null
   loading: boolean
@@ -34,6 +37,7 @@ const PoolContext = createContext<PoolData>({
   games: [],
   entrants: [],
   profiles: [],
+  details: [],
   picks: [],
   pool: null,
   loading: true,
@@ -49,13 +53,14 @@ export function PoolProvider({ children }: { children: ReactNode }) {
   const [games, setGames] = useState<Game[]>([])
   const [entrants, setEntrants] = useState<Entrant[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
+  const [details, setDetails] = useState<MemberDetail[]>([])
   const [picks, setPicks] = useState<PickRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setError(null)
-    const [s, t, w, r, e, p, k, g] = await Promise.all([
+    const [s, t, w, r, e, p, k, g, d] = await Promise.all([
       supabase.from('survivor_settings').select('*').maybeSingle(),
       supabase.from('survivor_teams').select('*').order('conference').order('division').order('name'),
       supabase.from('survivor_weeks').select('*').order('week'),
@@ -66,9 +71,11 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       // everyone's once a week is locked or final.
       supabase.from('survivor_picks').select('*'),
       supabase.from('survivor_games').select('*').order('week').order('kickoff_at', { nullsFirst: false }),
+      // Shared with the wrestling league; real first names sit beside display names.
+      supabase.from('member_details').select('user_id, real_name'),
     ])
 
-    const firstError = [s, t, w, r, e, p, k, g].find((res) => res.error)?.error
+    const firstError = [s, t, w, r, e, p, k, g, d].find((res) => res.error)?.error
     if (firstError) setError(firstError.message)
 
     setSettings((s.data as PoolSettings) ?? null)
@@ -79,6 +86,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
     setProfiles((p.data as Profile[]) ?? [])
     setPicks((k.data as PickRow[]) ?? [])
     setGames((g.data as Game[]) ?? [])
+    setDetails((d.data as MemberDetail[]) ?? [])
     setLoading(false)
   }, [])
 
@@ -88,12 +96,15 @@ export function PoolProvider({ children }: { children: ReactNode }) {
 
   const pool = useMemo(() => {
     if (!settings) return null
-    return buildPool({ settings, teams, weeks, results, entrants, profiles, picks })
-  }, [settings, teams, weeks, results, entrants, profiles, picks])
+    return buildPool({ settings, teams, weeks, results, entrants, profiles, picks, details })
+  }, [settings, teams, weeks, results, entrants, profiles, picks, details])
 
   return (
     <PoolContext.Provider
-      value={{ settings, teams, weeks, results, games, entrants, profiles, picks, pool, loading, error, reload }}
+      value={{
+        settings, teams, weeks, results, games, entrants, profiles, details, picks,
+        pool, loading, error, reload,
+      }}
     >
       {children}
     </PoolContext.Provider>

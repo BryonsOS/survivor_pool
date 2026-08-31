@@ -9,6 +9,12 @@ export interface Profile {
   is_admin: boolean
 }
 
+/** Shared with the fantasy-wrestling league: the member's real first name. */
+export interface MemberDetail {
+  user_id: string
+  real_name: string | null
+}
+
 export interface PoolSettings {
   id: boolean
   pool_name: string
@@ -108,6 +114,8 @@ export type EntrantStatus = 'alive' | 'eliminated' | 'winner'
 export interface Standing {
   userId: string
   name: string
+  /** First name, shown beside the display name so the pool knows who is who. */
+  realName: string | null
   status: EntrantStatus
   statusLabel: string
   strikes: number

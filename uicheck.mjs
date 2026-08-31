@@ -166,6 +166,13 @@ const TABLES = {
   survivor_picks: PICKS,
   survivor_invite: [{ invite_code: 'SURVIVE2026' }],
   survivor_games: GAMES,
+  member_details: [
+    { user_id: ME, real_name: 'Bryon' },
+    { user_id: 'u-mike', real_name: 'Mike' },
+    { user_id: 'u-sara', real_name: 'Sara' },
+    { user_id: 'u-danny', real_name: 'Dan' },
+    { user_id: 'u-jules', real_name: 'Julian' },
+  ],
 }
 
 const browser = await chromium.launch({

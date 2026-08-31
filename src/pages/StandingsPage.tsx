@@ -64,6 +64,7 @@ export default function StandingsPage() {
                     {row.userId === userId && <span className="you-tag">you</span>}
                     {!row.paid && <span className="unpaid-tag">unpaid</span>}
                   </div>
+                  {row.realName && <div className="standing-real-name">{row.realName}</div>}
                   <div className="standing-status">{row.statusLabel}</div>
                 </div>
                 <div className="standing-meta">

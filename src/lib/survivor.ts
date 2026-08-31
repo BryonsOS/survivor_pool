@@ -1,5 +1,6 @@
 import type {
   Entrant,
+  MemberDetail,
   PickHistoryEntry,
   PickRow,
   PoolSettings,
@@ -26,6 +27,7 @@ export interface PoolInput {
   entrants: Entrant[]
   profiles: Profile[]
   picks: PickRow[]
+  details?: MemberDetail[]
 }
 
 export interface PoolState {
@@ -47,6 +49,7 @@ export interface PoolState {
 interface Ledger {
   userId: string
   name: string
+  realName: string | null
   paid: boolean
   strikes: number
   eliminated: boolean
@@ -57,10 +60,15 @@ interface Ledger {
 }
 
 export function buildPool(input: PoolInput): PoolState {
-  const { settings, teams, weeks, results, entrants, profiles, picks } = input
+  const { settings, teams, weeks, results, entrants, profiles, picks, details = [] } = input
 
   const teamByAbbr = new Map(teams.map((team) => [team.abbr, team]))
   const nameById = new Map(profiles.map((profile) => [profile.id, profile.display_name]))
+  const realNameById = new Map(
+    details
+      .filter((d) => d.real_name && d.real_name.trim())
+      .map((d) => [d.user_id, d.real_name!.trim()]),
+  )
 
   // results indexed as week -> team -> outcome
   const resultsByWeek = new Map<number, Map<string, Result['outcome']>>()
@@ -91,6 +99,7 @@ export function buildPool(input: PoolInput): PoolState {
       {
         userId: entrant.user_id,
         name: nameById.get(entrant.user_id) ?? 'Unknown member',
+        realName: realNameById.get(entrant.user_id) ?? null,
         paid: entrant.paid,
         strikes: 0,
         eliminated: false,
@@ -262,6 +271,7 @@ function finalize(
   return {
     userId: ledger.userId,
     name: ledger.name,
+    realName: ledger.realName,
     status: ledger.eliminated ? 'eliminated' : 'alive',
     statusLabel: statusLabel(ledger, settings),
     strikes: ledger.strikes,
