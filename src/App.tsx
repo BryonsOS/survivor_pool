@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import { configError } from './lib/supabase'
 import { PoolProvider } from './context/PoolContext'
 import Layout from './components/Layout'
 import AuthPage from './pages/AuthPage'
@@ -10,9 +11,15 @@ import SeasonPage from './pages/SeasonPage'
 import RulesPage from './pages/RulesPage'
 import AdminPage from './pages/AdminPage'
 import AccountPage from './pages/AccountPage'
+import SetupPage from './pages/SetupPage'
 
 export default function App() {
   const { session, profile, isEntrant, loading } = useAuth()
+
+  // Built without its Supabase config — nothing below can work, so say so plainly.
+  if (configError) {
+    return <SetupPage />
+  }
 
   if (loading) {
     return <div className="page-loading">Loading…</div>
