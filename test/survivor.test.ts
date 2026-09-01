@@ -40,7 +40,7 @@ const profiles = [
 ]
 
 const entrants = profiles.map((p) => ({
-  user_id: p.id, joined_at: '', paid: true, paid_at: null, payment_note: null,
+  user_id: p.id, joined_at: '', team_name: null, paid: true, paid_at: null, payment_note: null,
 }))
 
 let pickId = 0
@@ -335,4 +335,23 @@ test('standings work when no real names exist at all', () => {
   const s = by(base())
   assert.equal(s.Alice.realName, null)
   assert.equal(s.Alice.name, 'Alice', 'the display name is untouched')
+})
+
+
+test('a team name overrides the shared profile name', () => {
+  const named = entrants.map((e) =>
+    e.user_id === 'a' ? { ...e, team_name: 'Motor City Maulers' } : e)
+  const state = buildPool(base({ entrants: named }))
+  const alice = state.standings.find((r) => r.userId === 'a')!
+  assert.equal(alice.name, 'Motor City Maulers')
+
+  const bob = state.standings.find((r) => r.userId === 'b')!
+  assert.equal(bob.name, 'Bob', 'others still use their profile name')
+})
+
+test('a blank or whitespace team name falls back to the profile name', () => {
+  const blank = entrants.map((e) =>
+    e.user_id === 'a' ? { ...e, team_name: '   ' } : e)
+  const state = buildPool(base({ entrants: blank }))
+  assert.equal(state.standings.find((r) => r.userId === 'a')!.name, 'Alice')
 })

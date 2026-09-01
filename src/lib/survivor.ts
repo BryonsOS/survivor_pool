@@ -98,7 +98,10 @@ export function buildPool(input: PoolInput): PoolState {
       entrant.user_id,
       {
         userId: entrant.user_id,
-        name: nameById.get(entrant.user_id) ?? 'Unknown member',
+        name:
+          entrant.team_name?.trim() ||
+          nameById.get(entrant.user_id) ||
+          'Unknown member',
         realName: realNameById.get(entrant.user_id) ?? null,
         paid: entrant.paid,
         strikes: 0,

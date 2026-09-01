@@ -129,7 +129,8 @@ const PICKS = [
 ]
 
 const ENTRANTS = PROFILES.map((pr, i) => ({
-  user_id: pr.id, joined_at: '2026-09-01T00:00:00Z', paid: i > 0,
+  user_id: pr.id, joined_at: '2026-09-01T00:00:00Z',
+  team_name: i === 0 ? 'Motor City Maulers' : null, paid: i > 0,
   paid_at: i > 0 ? '2026-09-02T15:00:00Z' : null, payment_note: null,
 }))
 

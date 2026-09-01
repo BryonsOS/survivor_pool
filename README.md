@@ -85,6 +85,21 @@ clearing `survivor_picks` and `survivor_results`.
 The wrestling repo's keepalive workflow already pings this database twice a week, so no
 second keepalive is needed.
 
+## Names
+
+Two names, deliberately separate:
+
+- **Team name** (`survivor_entrants.team_name`) — pool-only, what the standings show.
+  Set it on the Account page. Blank falls back to the profile name.
+- **Profile name** (`profiles.display_name`) — shared with the wrestling league, so
+  changing it renames you there too.
+- **Real first name** (`member_details.real_name`) — also shared, shown under the team
+  name on the standings so the pool knows who is who.
+
+Writes to `survivor_entrants` stay admin-only because `paid` lives on that table.
+Players change their own team name through `survivor_set_team_name()`, a definer
+function that touches only their row and only that column.
+
 ## Entry fees
 
 The site never touches money. Players pay the commissioner directly through whatever

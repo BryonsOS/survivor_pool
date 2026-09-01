@@ -45,6 +45,8 @@ export interface Team {
 export interface Entrant {
   user_id: string
   joined_at: string
+  /** Pool-only name. Falls back to the shared profile display name when unset. */
+  team_name: string | null
   paid: boolean
   paid_at: string | null
   payment_note: string | null
@@ -113,6 +115,7 @@ export type EntrantStatus = 'alive' | 'eliminated' | 'winner'
 
 export interface Standing {
   userId: string
+  /** Team name if the player set one for this pool, otherwise their profile name. */
   name: string
   /** First name, shown beside the display name so the pool knows who is who. */
   realName: string | null
