@@ -118,6 +118,24 @@ link is configured; the commissioner marks them paid, and the app does the bookk
 Payment links are validated: only `http:` and `https:` URLs are rendered, so a stray
 `javascript:` value cannot end up in an href on every player's page.
 
+## Hardening
+
+- **Security headers** ship from `netlify.toml`: a CSP that allows scripts only from
+  this origin and network calls only to this Supabase project, plus `X-Frame-Options:
+  DENY`, HSTS, `nosniff`, a referrer policy, and a `Permissions-Policy` that turns off
+  camera/mic/geolocation/payment. The build emits no inline scripts, so `script-src
+  'self'` needs no unsafe escapes.
+- **Invite codes cannot be probed.** `survivor_validate_invite` is no longer callable
+  by `anon`; there is no endpoint that answers "is this code valid?" without an account.
+  The signup trigger rejects a bad code and no account is created.
+- **Database errors never reach players.** `src/lib/errors.ts` maps the codes this app
+  raises to plain sentences; anything unrecognised becomes a generic line rather than
+  the driver's text, which leaked table and constraint names.
+- **Changing a locked-in pick asks first**, since a mis-tap on a phone can cost a season.
+
+Still worth doing in the Supabase dashboard: enable **leaked password protection**
+(Authentication → Policies) and confirm **email confirmation** is required on signup.
+
 ## Development
 
 ```bash

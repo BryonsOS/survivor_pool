@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { supabase } from '../lib/supabase'
+import { authErrorMessage } from '../lib/errors'
 import { useAuth } from '../context/AuthContext'
 
 /**
@@ -7,6 +9,8 @@ import { useAuth } from '../context/AuthContext'
  * member takes. They already have an account; they just need the pool's invite code.
  */
 export default function JoinPage({ onManageOnly }: { onManageOnly?: () => void }) {
+  useDocumentTitle('Join the Pool')
+
   const { profile, signOut, refresh } = useAuth()
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -20,7 +24,7 @@ export default function JoinPage({ onManageOnly }: { onManageOnly?: () => void }
     setBusy(false)
 
     if (rpcError) {
-      setError(rpcError.message)
+      setError(authErrorMessage(rpcError))
       return
     }
     if (!data) {

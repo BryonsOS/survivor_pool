@@ -1,9 +1,13 @@
 import { useState, type FormEvent } from 'react'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { supabase } from '../lib/supabase'
+import { authErrorMessage } from '../lib/errors'
 
 type Mode = 'signin' | 'signup'
 
 export default function AuthPage() {
+  useDocumentTitle('Sign In')
+
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,7 +26,7 @@ export default function AuthPage() {
     try {
       if (mode === 'signin') {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) setError(signInError.message)
+        if (signInError) setError(authErrorMessage(signInError))
         return
       }
 
@@ -31,18 +35,10 @@ export default function AuthPage() {
         return
       }
 
-      const { data: valid, error: rpcError } = await supabase.rpc('survivor_validate_invite', {
-        code: inviteCode,
-      })
-      if (rpcError) {
-        setError(rpcError.message)
-        return
-      }
-      if (!valid) {
-        setError('That invite code is not valid. Ask the commissioner for the current code.')
-        return
-      }
-
+      // The invite code is checked by the signup trigger in the database, which
+      // refuses to create the account. There is deliberately no way to test a code
+      // without attempting a signup — an open "is this code valid?" endpoint let
+      // anyone guess codes at will.
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -54,7 +50,7 @@ export default function AuthPage() {
           },
         },
       })
-      if (signUpError) setError(signUpError.message)
+      if (signUpError) setError(authErrorMessage(signUpError))
       else if (!data.session) setNotice('Check your email to confirm your account, then sign in.')
     } finally {
       setBusy(false)
@@ -180,7 +176,7 @@ export default function AuthPage() {
                     { redirectTo: window.location.origin + '/reset' },
                   )
                   setBusy(false)
-                  if (resetError) setError(resetError.message)
+                  if (resetError) setError(authErrorMessage(resetError))
                   else setNotice('Reset link sent — check your email, then follow it to set a new password.')
                 }}
               >

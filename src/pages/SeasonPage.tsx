@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { usePool } from '../context/PoolContext'
 import { formatDeadline } from '../lib/time'
 import { WEEK_STATUS_LABELS } from '../lib/types'
 
 export default function SeasonPage() {
+  useDocumentTitle('Season')
+
   const { weeks, picks, results, teams, profiles, loading, error } = usePool()
   const [openWeek, setOpenWeek] = useState<number | null>(null)
 
@@ -41,13 +44,14 @@ export default function SeasonPage() {
                 className="week-head"
                 onClick={() => setOpenWeek(expanded ? null : week.week)}
                 aria-expanded={expanded}
+                aria-label={`${expanded ? 'Hide' : 'Show'} Week ${week.week} picks`}
               >
                 <span className="week-num">Week {week.week}</span>
                 <span className={`week-status ${week.status}`}>
                   {WEEK_STATUS_LABELS[week.status]}
                 </span>
                 <span className="week-deadline">{formatDeadline(week.locks_at)}</span>
-                <span className="week-chevron">{expanded ? '−' : '+'}</span>
+                <span className="week-chevron" aria-hidden="true">{expanded ? '−' : '+'}</span>
               </button>
 
               {expanded && (
@@ -77,7 +81,12 @@ export default function SeasonPage() {
                                   {pick.is_bye ? 'BYE week' : teamName.get(pick.team ?? '') ?? pick.team}
                                 </td>
                                 <td className={`wt-result ${outcome ?? 'pending'}`}>
-                                  {outcome ? outcome.toUpperCase() : pick.is_bye ? '—' : 'pending'}
+                                  {/* a glyph as well as colour, so the result reads
+                                      without relying on red-vs-green */}
+                                  {outcome === 'win' && '✓ WIN'}
+                                  {outcome === 'loss' && '✕ LOSS'}
+                                  {outcome === 'tie' && '= TIE'}
+                                  {!outcome && (pick.is_bye ? '—' : 'pending')}
                                 </td>
                               </tr>
                             )

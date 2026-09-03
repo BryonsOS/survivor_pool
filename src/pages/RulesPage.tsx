@@ -1,7 +1,10 @@
 import { usePool } from '../context/PoolContext'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { buildRules } from '../lib/survivor'
 
 export default function RulesPage() {
+  useDocumentTitle('Rules')
+
   const { settings, teams, pool, loading } = usePool()
 
   if (loading) return <div className="page-loading">Loading the rules…</div>

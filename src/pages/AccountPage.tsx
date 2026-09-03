@@ -1,9 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { supabase } from '../lib/supabase'
+import { actionErrorMessage } from '../lib/errors'
 import { useAuth } from '../context/AuthContext'
 import { usePool } from '../context/PoolContext'
 
 export default function AccountPage() {
+  useDocumentTitle('Account')
+
   const { profile, refresh, session } = useAuth()
   const { entrants, reload } = usePool()
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '')
@@ -27,7 +31,7 @@ export default function AccountPage() {
     setError(null)
     const { error: rpcError } = await supabase.rpc('survivor_set_team_name', { name: teamName })
     setBusy(false)
-    if (rpcError) setError(rpcError.message)
+    if (rpcError) setError(actionErrorMessage(rpcError))
     else {
       setNotice(teamName.trim() ? 'Team name updated.' : 'Team name cleared.')
       await reload()
@@ -44,7 +48,7 @@ export default function AccountPage() {
       .update({ display_name: displayName.trim() })
       .eq('id', profile!.id)
     setBusy(false)
-    if (writeError) setError(writeError.message)
+    if (writeError) setError(actionErrorMessage(writeError))
     else {
       setNotice('Display name updated.')
       await refresh()

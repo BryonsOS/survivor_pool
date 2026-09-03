@@ -1,7 +1,10 @@
 import { useAuth } from '../context/AuthContext'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { usePool } from '../context/PoolContext'
 
 export default function StandingsPage() {
+  useDocumentTitle('Standings')
+
   const { session } = useAuth()
   const userId = session!.user.id
   const { pool, settings, loading, error } = usePool()

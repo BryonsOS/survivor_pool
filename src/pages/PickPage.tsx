@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { usePool } from '../context/PoolContext'
 import PaymentNotice from '../components/PaymentNotice'
+import { pickErrorMessage } from '../lib/errors'
 import { countdownText, formatDeadline, formatKickoff } from '../lib/time'
 import type { Game, Team } from '../lib/types'
 
 export default function PickPage() {
+  useDocumentTitle('My Pick')
+
   const { session } = useAuth()
   const userId = session!.user.id
   const { settings, teams, games, pool, picks, loading, error, reload } = usePool()
@@ -87,6 +91,13 @@ export default function PickPage() {
 
   async function choose(team: Team) {
     if (!week || !isOpen || eliminated) return
+    if (myPick?.team && myPick.team !== team.abbr) {
+      const current = teams.find((t) => t.abbr === myPick.team)?.name ?? myPick.team
+      const ok = window.confirm(
+        `Change your Week ${week.week} pick from ${current} to ${team.name}?`,
+      )
+      if (!ok) return
+    }
     setSaving(team.abbr)
     setMessage(null)
     setFailure(null)
@@ -101,17 +112,7 @@ export default function PickPage() {
     setSaving(null)
 
     if (writeError) {
-      // The one-time-use rule is a unique index, so a repeat pick fails here even
-      // if the UI somehow offered it.
-      setFailure(
-        writeError.code === '23505'
-          ? `You have already used ${team.name} this season. Teams are one-time use.`
-          : writeError.code === '23514'
-            ? writeError.message.includes('Entry fee')
-              ? 'Your entry fee has not been recorded yet, so picks are locked. Pay the commissioner and they will unlock it.'
-              : `${team.name} are on a bye in Week ${week.week} — they cannot win, so the pick was rejected.`
-            : writeError.message,
-      )
+      setFailure(pickErrorMessage(writeError, team.name, week.week))
       return
     }
 

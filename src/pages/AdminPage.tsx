@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { supabase } from '../lib/supabase'
+import { actionErrorMessage } from '../lib/errors'
 import { usePool } from '../context/PoolContext'
 import { formatDeadline, toDatetimeLocal } from '../lib/time'
 import { safePaymentUrl } from '../lib/payments'
 import type { Outcome, Week, WeekStatus } from '../lib/types'
 
 export default function AdminPage() {
+  useDocumentTitle('Admin')
+
   const { settings, teams, weeks, results, picks, pool, entrants, profiles, loading, reload } = usePool()
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [inviteCode, setInviteCode] = useState('')
@@ -35,6 +39,18 @@ export default function AdminPage() {
     [profiles],
   )
 
+  // Alive players with no pick in the open week. Missing the deadline costs a
+  // strike, so the commissioner needs to see this before it happens.
+  const missingPicks = useMemo(() => {
+    if (!week || week.status !== 'open' || !pool) return []
+    const picked = new Set(
+      picks.filter((p) => p.week === week.week).map((p) => p.user_id),
+    )
+    return pool.standings.filter(
+      (row) => row.status !== 'eliminated' && !picked.has(row.userId),
+    )
+  }, [week, pool, picks])
+
   // Teams actually picked this week — the only ones needing a result entered.
   const pickedTeams = useMemo(() => {
     if (!week) return []
@@ -59,7 +75,7 @@ export default function AdminPage() {
     setError(null)
     const { error: writeError } = await fn()
     setBusy(false)
-    if (writeError) setError(`${label}: ${writeError.message}`)
+    if (writeError) setError(`${label} — ${actionErrorMessage(writeError)}`)
     else {
       setNotice(label)
       await reload()
@@ -210,6 +226,28 @@ export default function AdminPage() {
                   </div>
                 )
               })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {week && week.status === 'open' && (
+        <section className="admin-block">
+          <h2 className="admin-heading">Still need a pick — Week {week.week}</h2>
+          <p className="muted small">
+            Alive players with nothing locked in. A missed deadline is a strike, so this is
+            who to nudge before {formatDeadline(week.locks_at)}.
+          </p>
+          {missingPicks.length === 0 ? (
+            <p className="muted small">Everyone still alive has picked.</p>
+          ) : (
+            <div className="nudge-list">
+              {missingPicks.map((row) => (
+                <span key={row.userId} className="nudge-name">
+                  {row.name}
+                  {row.realName && <span className="nudge-real"> · {row.realName}</span>}
+                </span>
+              ))}
             </div>
           )}
         </section>
