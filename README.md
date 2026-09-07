@@ -43,7 +43,7 @@ publishable key; policies decide what it may see and write.
 | `survivor_teams` | read | read |
 | `survivor_entrants` | entrants read the roster | full control |
 | `survivor_weeks` / `survivor_results` / `survivor_games` | entrants read | full control |
-| `survivor_picks` | write own **only while that week is open**; see others' only once the week is locked | full control |
+| `survivor_picks` | write own **only while that week is open and its deadline has not passed**; see others' only once the week is locked | full control |
 
 Two rules are enforced by constraints rather than policies, so they hold even if the UI is
 bypassed:
@@ -53,6 +53,16 @@ bypassed:
 - `survivor_pick_shape` — a pick is either a team or a BYE, never both and never neither.
 - `survivor_picks_playable` — a trigger rejects any pick for a team that has no game that
   week, so a bye-week team cannot be picked even by a client that skips the UI.
+
+The deadline is enforced by the database, not by the commissioner remembering to lock a
+week. `survivor_week_accepts_picks()` requires both an open week and `now() < locks_at`,
+so once the first kickoff arrives nobody can change a pick — no matter who is asleep.
+Moving a deadline in Admin → Weeks still takes effect immediately, which is the escape
+hatch when a week genuinely needs longer. Admins keep an unrestricted policy, because
+correcting somebody's pick after the fact is a real need.
+
+The pick board mirrors the same rule: when the countdown hits zero it stops offering the
+teams rather than letting a click fail.
 
 Signups run through the shared `handle_new_user` trigger, which accepts either the
 wrestling code or the survivor code and enrols survivor signups in the pool. An unknown
@@ -220,6 +230,9 @@ download Playwright's own build.
   For most weeks that is Thursday night; Week 1 is Wednesday Sept 9, and Week 18 uses the
   earliest slot the league printed (Sat Jan 9) until those games are scheduled. Any week's
   deadline can be overridden in Admin → Weeks.
+- That deadline enforces itself. You still mark a week **locked** to reveal everyone's
+  picks and **final** to score it, but picks close on the clock whether or not you are
+  there.
 - Marking a week **final** automatically opens the next one.
 - Only teams somebody actually picked appear in the results list — you never enter 32
   results for a week.

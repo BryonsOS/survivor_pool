@@ -6,9 +6,12 @@ import type { PoolSettings } from '../lib/types'
 export default function PaymentNotice({
   settings,
   compact = false,
+  picksOpen = true,
 }: {
   settings: PoolSettings
   compact?: boolean
+  /** False once the deadline has passed, so the notice stops offering to let them pick. */
+  picksOpen?: boolean
 }) {
   const href = safePaymentUrl(settings.payment_url)
 
@@ -22,9 +25,11 @@ export default function PaymentNotice({
         <p className="payment-copy">
           {settings.payment_instructions}
           {settings.payment_handle ? ` Send it to ${settings.payment_handle}.` : ''}
-          {settings.require_payment_to_pick
-            ? ' Your picks are locked until the commissioner records it.'
-            : ' You can still make picks in the meantime.'}
+          {!picksOpen
+            ? ''
+            : settings.require_payment_to_pick
+              ? ' Your picks are locked until the commissioner records it.'
+              : ' You can still make picks in the meantime.'}
         </p>
       )}
       {href && (

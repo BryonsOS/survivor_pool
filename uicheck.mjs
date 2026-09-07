@@ -284,6 +284,17 @@ for (const [path, name] of routes) {
   console.log(`${name.padEnd(10)} h1=${JSON.stringify(h1)}`)
 }
 
+// The deadline passing has to close the board on its own: the database refuses a
+// pick once locks_at is past, whether or not the commissioner flipped the week.
+WEEKS[OPEN_WEEK - 1].locks_at = new Date(Date.now() - 1000 * 60 * 5).toISOString()
+await page.goto(BASE + '/', { waitUntil: 'networkidle' })
+await page.waitForTimeout(700)
+await page.screenshot({ path: `${OUT}/ui-pick-closed.png`, fullPage: true })
+if (await page.locator('.team-btn').count()) {
+  problems.push('DEADLINE the pick board is still showing after the deadline passed')
+}
+WEEKS[OPEN_WEEK - 1].locks_at = new Date(Date.now() + 1000 * 60 * 60 * 52).toISOString()
+
 // the signed-out view
 await context.clearCookies()
 const anon = await context.newPage()

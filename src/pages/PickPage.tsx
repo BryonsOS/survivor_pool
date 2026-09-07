@@ -116,7 +116,11 @@ export default function PickPage() {
     )
   }
 
-  const isOpen = week.status === 'open'
+  // The database refuses picks once locks_at passes, whether or not the week has
+  // been flipped to 'locked'. Mirror that here so the board closes itself rather
+  // than letting someone click into a rejection. `now` ticks every 30 seconds.
+  const deadlinePassed = week.locks_at !== null && now >= new Date(week.locks_at).getTime()
+  const isOpen = week.status === 'open' && !deadlinePassed
   const eliminated = me?.status === 'eliminated'
   const entered = Boolean(me)
 
@@ -157,20 +161,20 @@ export default function PickPage() {
       <h1 className="page-title">{myPick ? 'Your pick is in' : 'Make your pick'}</h1>
 
       <div className="pick-status">
-        <div className={`status-pill status-${week.status}`}>
-          {week.status === 'open' && <span className="live-dot" />}
-          {week.status === 'open'
+        <div className={`status-pill status-${isOpen ? week.status : week.status === 'open' ? 'locked' : week.status}`}>
+          {isOpen && <span className="live-dot" />}
+          {isOpen
             ? countdownText(week.locks_at, now)
-            : week.status === 'locked'
-              ? 'Picks are locked — results pending'
-              : week.status === 'final'
-                ? 'Week final'
-                : 'Not open yet'}
+            : week.status === 'final'
+              ? 'Week final'
+              : week.status === 'upcoming'
+                ? 'Not open yet'
+                : 'Picks are locked — results pending'}
         </div>
         <div className="muted">Deadline {formatDeadline(week.locks_at)}</div>
       </div>
 
-      {entered && me && !me.paid && <PaymentNotice settings={settings} />}
+      {entered && me && !me.paid && <PaymentNotice settings={settings} picksOpen={isOpen} />}
 
       {!entered && (
         <div className="alert alert-error">
