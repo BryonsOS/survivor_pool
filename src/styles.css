@@ -450,3 +450,31 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- pick distribution ---------- */
+.pool-lean {
+  padding: 13px 14px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--bg-card);
+}
+.pool-lean-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 9px; flex-wrap: wrap;
+}
+.pool-lean-title {
+  font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.1em;
+  font-size: 12px; font-weight: 700; color: var(--green);
+}
+.lean-rows { display: flex; flex-direction: column; gap: 6px; }
+.lean-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.lean-team { flex: 0 0 40%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lean-bar {
+  flex: 1; height: 8px; border-radius: 999px;
+  background: var(--bg-raise); overflow: hidden;
+}
+.lean-fill { display: block; height: 100%; background: var(--turf); border-radius: 999px; }
+.lean-pct { flex: 0 0 38px; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.team-share {
+  font-size: 10.5px; color: var(--text-dim); flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.team-btn.selected .team-share { color: var(--green); }

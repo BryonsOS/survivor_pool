@@ -33,6 +33,8 @@ export interface PoolSettings {
   payment_url: string | null
   payment_instructions: string
   require_payment_to_pick: boolean
+  /** Show how the pool is leaning before a week locks. */
+  show_pick_counts: boolean
 }
 
 export interface Team {

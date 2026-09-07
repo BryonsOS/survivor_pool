@@ -30,6 +30,7 @@ const settings: PoolSettings = {
   payment_url: null,
   payment_instructions: 'Pay the commissioner your entry fee before Week 1.',
   require_payment_to_pick: false,
+  show_pick_counts: true,
 }
 
 const profiles = [

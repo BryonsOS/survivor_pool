@@ -495,6 +495,24 @@ export default function AdminPage() {
             />
           </label>
           <label>
+            Live pick counts
+            <select
+              value={String(settings.show_pick_counts)}
+              disabled={busy}
+              onChange={(e) =>
+                run('Pick-count visibility updated', () =>
+                  supabase
+                    .from('survivor_settings')
+                    .update({ show_pick_counts: e.target.value === 'true' })
+                    .eq('id', true),
+                )
+              }
+            >
+              <option value="true">shown before lock</option>
+              <option value="false">hidden until lock</option>
+            </select>
+          </label>
+          <label>
             Buy-backs
             <select
               value={String(settings.allow_buy_backs)}

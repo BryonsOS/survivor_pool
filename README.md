@@ -100,6 +100,20 @@ Writes to `survivor_entrants` stay admin-only because `paid` lives on that table
 Players change their own team name through `survivor_set_team_name()`, a definer
 function that touches only their row and only that column.
 
+## Pick distribution
+
+The pick board shows how the pool is leaning while picks are still open — which
+teams are being taken and by what share — the way Splash Sports does it.
+
+Individual picks stay hidden until a week locks. The distribution comes from
+`survivor_pick_counts()`, a definer function that returns **counts per team and
+nothing else**: no user ids, no names. An entrant can see that five people took
+Philadelphia without being able to read a single rival's pick row.
+
+Commissioners can switch it off (Admin → Rules → *Live pick counts*), which hides
+it until a week locks; once locked the individual picks are public anyway, so
+counts always show from that point.
+
 ## Entry fees
 
 The site never touches money. Players pay the commissioner directly through whatever

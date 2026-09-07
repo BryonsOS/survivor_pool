@@ -47,6 +47,7 @@ const SETTINGS = {
   payment_url: 'https://venmo.com/u/Bryon-Romp',
   payment_instructions: 'Venmo your entry fee to the commissioner before Week 1.',
   require_payment_to_pick: false,
+  show_pick_counts: true,
 }
 
 // Real 2026 games for weeks 9-11, so the board shows true opponents and byes.
@@ -208,6 +209,20 @@ await context.route('**/rest/v1/**', (route) => {
     body: JSON.stringify(single ? (rows[0] ?? null) : rows),
   })
 })
+
+// Registered after the catch-all on purpose: Playwright matches the most
+// recently added route first, so this must come last to win.
+await context.route('**/rest/v1/rpc/survivor_pick_counts', (route) =>
+  route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify([
+      { team: 'PHI', picks: 2 },
+      { team: 'KC', picks: 1 },
+      { team: 'MIN', picks: 1 },
+    ]),
+  }),
+)
 
 const page = await context.newPage()
 page.on('pageerror', (e) => problems.push(`PAGEERROR ${e.message}`))

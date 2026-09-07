@@ -23,6 +23,8 @@ interface PoolData {
   profiles: Profile[]
   details: MemberDetail[]
   picks: PickRow[]
+  /** team -> how many entrants took it in the open week (no identities). */
+  pickCounts: Map<string, number>
   pool: PoolState | null
   loading: boolean
   error: string | null
@@ -39,6 +41,7 @@ const PoolContext = createContext<PoolData>({
   profiles: [],
   details: [],
   picks: [],
+  pickCounts: new Map(),
   pool: null,
   loading: true,
   error: null,
@@ -55,6 +58,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [details, setDetails] = useState<MemberDetail[]>([])
   const [picks, setPicks] = useState<PickRow[]>([])
+  const [pickCounts, setPickCounts] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -99,11 +103,30 @@ export function PoolProvider({ children }: { children: ReactNode }) {
     return buildPool({ settings, teams, weeks, results, entrants, profiles, picks, details })
   }, [settings, teams, weeks, results, entrants, profiles, picks, details])
 
+  const openWeek = pool?.currentWeek?.week ?? null
+  useEffect(() => {
+    let cancelled = false
+    if (openWeek == null) {
+      setPickCounts(new Map())
+      return
+    }
+    supabase
+      .rpc('survivor_pick_counts', { p_week: openWeek })
+      .then(({ data }) => {
+        if (cancelled) return
+        const rows = (data as { team: string; picks: number }[] | null) ?? []
+        setPickCounts(new Map(rows.map((row) => [row.team, row.picks])))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [openWeek, picks])
+
   return (
     <PoolContext.Provider
       value={{
         settings, teams, weeks, results, games, entrants, profiles, details, picks,
-        pool, loading, error, reload,
+        pickCounts, pool, loading, error, reload,
       }}
     >
       {children}

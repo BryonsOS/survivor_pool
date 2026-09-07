@@ -14,7 +14,7 @@ export default function PickPage() {
 
   const { session } = useAuth()
   const userId = session!.user.id
-  const { settings, teams, games, pool, picks, loading, error, reload } = usePool()
+  const { settings, teams, games, pool, picks, pickCounts, loading, error, reload } = usePool()
   const [now, setNow] = useState(() => Date.now())
   const [saving, setSaving] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -63,6 +63,15 @@ export default function PickPage() {
     }
     return map
   }, [games, week])
+
+  const totalPicksIn = useMemo(
+    () => [...pickCounts.values()].reduce((sum, n) => sum + n, 0),
+    [pickCounts],
+  )
+  const leaders = useMemo(
+    () => [...pickCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5),
+    [pickCounts],
+  )
 
   function matchup(team: Team, game: Game | undefined) {
     if (!game) return 'BYE week'
@@ -203,6 +212,34 @@ export default function PickPage() {
 
       {isOpen && !eliminated && entered && (
         <>
+          {totalPicksIn > 0 && (
+            <div className="pool-lean">
+              <div className="pool-lean-head">
+                <span className="pool-lean-title">How the pool is leaning</span>
+                <span className="muted small">
+                  {/* "of N" only when it can read sensibly — never "11 of 4" */}
+                  {(pool?.aliveCount ?? 0) >= totalPicksIn
+                    ? `${totalPicksIn} of ${pool?.aliveCount} picks in`
+                    : `${totalPicksIn} picks in`}
+                </span>
+              </div>
+              <div className="lean-rows">
+                {leaders.map(([abbr, count]) => (
+                  <div key={abbr} className="lean-row">
+                    <span className="lean-team">{teams.find((t) => t.abbr === abbr)?.name ?? abbr}</span>
+                    <span className="lean-bar">
+                      <span
+                        className="lean-fill"
+                        style={{ width: `${Math.round((count / totalPicksIn) * 100)}%` }}
+                      />
+                    </span>
+                    <span className="lean-pct">{Math.round((count / totalPicksIn) * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <p className="board-help">
             Teams you have already used are greyed out — every pick burns that team for the rest of
             the season, win or lose. Teams on their bye cannot be picked.
@@ -236,6 +273,11 @@ export default function PickPage() {
                           <span className="team-name">{team.name}</span>
                           <span className="team-matchup">{matchup(team, game)}</span>
                         </span>
+                        {!onBye && !used && totalPicksIn > 0 && (pickCounts.get(team.abbr) ?? 0) > 0 && (
+                          <span className="team-share" title={`${pickCounts.get(team.abbr)} of ${totalPicksIn} picks`}>
+                            {Math.round(((pickCounts.get(team.abbr) ?? 0) / totalPicksIn) * 100)}%
+                          </span>
+                        )}
                         {onBye && <span className="team-flag">bye</span>}
                         {!onBye && used && <span className="team-flag">used</span>}
                         {selected && <span className="team-flag picked">picked</span>}
