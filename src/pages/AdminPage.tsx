@@ -5,7 +5,8 @@ import { actionErrorMessage } from '../lib/errors'
 import { usePool } from '../context/PoolContext'
 import { formatDeadline, toDatetimeLocal } from '../lib/time'
 import { safePaymentUrl } from '../lib/payments'
-import type { Outcome, Week, WeekStatus } from '../lib/types'
+import { oddsAreFresh } from '../lib/odds'
+import type { OddsRun, Outcome, Week, WeekStatus } from '../lib/types'
 
 export default function AdminPage() {
   useDocumentTitle('Admin')
@@ -28,6 +29,16 @@ export default function AdminPage() {
   useEffect(() => {
     if (selectedWeek === null && pool?.currentWeek) setSelectedWeek(pool.currentWeek.week)
   }, [pool, selectedWeek])
+
+  const [oddsRuns, setOddsRuns] = useState<OddsRun[]>([])
+  useEffect(() => {
+    supabase
+      .from('survivor_odds_runs')
+      .select('ran_at, ok, games_updated, detail')
+      .order('ran_at', { ascending: false })
+      .limit(5)
+      .then(({ data }) => setOddsRuns((data as OddsRun[]) ?? []))
+  }, [])
 
   const week = useMemo(
     () => weeks.find((w) => w.week === selectedWeek) ?? null,
@@ -393,6 +404,38 @@ export default function AdminPage() {
               )
             })}
           </div>
+        )}
+      </section>
+
+      <section className="admin-block">
+        <h2 className="admin-heading">Odds feed</h2>
+        <p className="muted small">
+          Win percentages come from a sportsbook feed that refreshes every three hours. Nobody
+          has to run it — this is only here so a feed that quietly stopped is visible.
+        </p>
+        {oddsRuns.length === 0 ? (
+          <p className="muted small">
+            It has not run yet. It starts working as soon as ODDS_API_KEY is set in the Supabase
+            dashboard under Edge Functions → Secrets.
+          </p>
+        ) : (
+          <div className="odds-runs">
+            {oddsRuns.map((run) => (
+              <div key={run.ran_at} className={`odds-run ${run.ok ? 'ok' : 'bad'}`}>
+                <span className="odds-run-when">{formatDeadline(run.ran_at)}</span>
+                <span className="odds-run-what">
+                  {run.ok ? `${run.games_updated} games priced` : 'failed'}
+                  {run.detail ? ` — ${run.detail}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        {oddsRuns.length > 0 && !oddsAreFresh(oddsRuns.find((run) => run.ok)?.ran_at) && (
+          <p className="muted small">
+            Nothing has come in for over a day, so the board is hiding win percentages rather than
+            showing stale ones.
+          </p>
         )}
       </section>
 

@@ -214,6 +214,7 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .division-teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(212px, 1fr)); gap: 8px; }
 .team-btn {
   display: flex; align-items: flex-start; gap: 9px; text-align: left; cursor: pointer;
+  overflow: hidden;
   padding: 10px 11px; border-radius: var(--radius);
   border: 1px solid var(--border); background: var(--bg-card); color: var(--text);
   font-family: var(--font-body); font-size: 14px; transition: 140ms ease; width: 100%;
@@ -478,3 +479,35 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
   font-variant-numeric: tabular-nums;
 }
 .team-btn.selected .team-share { color: var(--green); }
+
+/* ---------- odds ---------- */
+/* Two percentages sit next to each other on a pick, so they are visually ranked:
+   the win chance is what decides the pick, the pool's share is context. */
+.team-meta {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 1px;
+  flex: 0 0 auto; max-width: 40%; line-height: 1.5;
+}
+.team-meta:empty { display: none; }
+.team-chance {
+  font-family: var(--font-display); font-weight: 700; font-size: 11.5px;
+  color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.team-btn.selected .team-chance { color: var(--green); }
+.team-share { white-space: nowrap; }
+.current-pick-chance { color: var(--text); font-weight: 600; }
+
+/* ---------- who picked whom ---------- */
+.pick-groups { display: flex; flex-direction: column; gap: 10px; }
+.pick-group { border-top: 1px solid var(--border); padding-top: 9px; }
+.pick-group-head { display: flex; align-items: baseline; gap: 8px; }
+.pick-group-team { font-weight: 600; font-size: 14px; }
+.pick-group-count {
+  font-size: 11.5px; color: var(--text-dim); flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+.pick-group-names { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.odds-runs { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.odds-run { display: flex; gap: 10px; align-items: baseline; }
+.odds-run-when { color: var(--text-dim); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+.odds-run-what { min-width: 0; }
+.odds-run.bad .odds-run-what { color: var(--red); }

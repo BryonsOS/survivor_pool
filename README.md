@@ -114,6 +114,37 @@ Commissioners can switch it off (Admin → Rules → *Live pick counts*), which 
 it until a week locks; once locked the individual picks are public anyway, so
 counts always show from that point.
 
+## Win chances
+
+Every playable team on the pick board carries the sportsbooks' consensus chance that
+it wins its game this week — the number Splash Sports shows — next to the share of
+the pool already on that team. The two are labelled ("62% win", "50% picked") because
+side by side they are easy to confuse.
+
+Where the number comes from:
+
+- A scheduled Edge Function (`supabase/functions/refresh-odds`) pulls head-to-head
+  moneylines from [The Odds API](https://the-odds-api.com) every three hours — 240
+  calls a month against a 500-call free allowance. `pg_cron` triggers it; the function
+  refuses to run twice within thirty minutes, so a retry storm cannot drain the quota.
+- Books quote a margin: the two sides of a game imply more than 100% between them. Each
+  book's pair is normalised back to 100% before it gets a vote, and the median across
+  books is stored. That arithmetic is in `src/lib/odds.ts` and unit tested.
+- Odds older than 36 hours are not shown at all. A wrong number is worse than no number,
+  and a game with no price simply shows no percentage.
+- **Admin → Odds feed** lists the last five runs. It exists so a feed that quietly
+  stopped is visible rather than silently absent.
+
+The key lives in Supabase (Edge Functions → Secrets, `ODDS_API_KEY`), never in this
+repository. `pg_cron` authenticates to the function with a shared secret generated inside
+the database by migration `008`, which is also never written down outside it.
+
+## Who picked whom
+
+Once a week locks, **Season → the week** groups that week's picks by team: how many
+took each team, who they were, and how it turned out. Before a week locks it shows
+nothing but counts (see *Pick distribution* above) — the reveal is the lock.
+
 ## Entry fees
 
 The site never touches money. Players pay the commissioner directly through whatever
@@ -164,7 +195,8 @@ bundle by Vite, so they are public either way — RLS is what protects the data.
 Supabase project.
 
 ```bash
-npm test     # the scoring engine: strikes, ties, eliminations, BYEs, champion detection
+npm test     # the scoring engine (strikes, ties, eliminations, champion detection)
+             # and the odds maths (vig removal, missing odds, staleness)
 npm run build
 ```
 
@@ -172,10 +204,13 @@ npm run build
 so the UI can be checked without a login or any writes to the live database:
 
 ```bash
-npm i -D playwright && npx playwright install chromium
+npx playwright install chromium
 npm run build && npx vite preview --port 4174 &
 SHOT_DIR=/tmp node uicheck.mjs
 ```
+
+Set `CHROMIUM_PATH` if a Chromium is already on the machine and you would rather not
+download Playwright's own build.
 
 ## Commissioner notes
 
@@ -190,3 +225,7 @@ SHOT_DIR=/tmp node uicheck.mjs
   results for a week.
 - Results are visible as soon as you enter them, but nothing costs a strike until you mark
   the week final. That makes "final" the deliberate sign-off.
+- The odds feed needs one thing done by hand, once: set `ODDS_API_KEY` in the Supabase
+  dashboard under **Edge Functions → Secrets**, using a free key from
+  [the-odds-api.com](https://the-odds-api.com). Until it is set, **Admin → Odds feed**
+  says so and the board simply shows no percentages.

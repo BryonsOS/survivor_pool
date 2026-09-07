@@ -70,6 +70,10 @@ export interface Game {
   kickoff_at: string | null
   tv: string | null
   note: string | null
+  /** Consensus moneyline, refreshed from The Odds API. Null until the book prices it. */
+  home_moneyline: number | null
+  away_moneyline: number | null
+  odds_updated_at: string | null
 }
 
 export interface Result {
@@ -135,4 +139,12 @@ export interface Standing {
   paid: boolean
   lastOutcomeLabel: string
   history: PickHistoryEntry[]
+}
+
+/** One run of the scheduled odds fetch. Commissioner-visible so a silent failure isn't. */
+export interface OddsRun {
+  ran_at: string
+  ok: boolean
+  games_updated: number
+  detail: string | null
 }

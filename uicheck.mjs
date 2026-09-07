@@ -98,6 +98,23 @@ const GAMES = [
 ]
 
 const OPEN_WEEK = 11
+
+// Odds for the open week only, so the board is exercised both with a price and
+// without one. Fresh timestamps, since stale odds are deliberately not rendered.
+const FIXTURE_MONEYLINES = {
+  'IND@HOU': [140, -165], 'MIA@BUF': [320, -410], 'BAL@CAR': [-175, 148],
+  'NO@CHI': [210, -255], 'TEN@DAL': [265, -330], 'TB@DET': [125, -145],
+  'ARI@KC': [340, -440], 'JAX@NYG': [-118, 100], 'NYJ@LAC': [230, -280],
+  'LV@DEN': [265, -330], 'PIT@PHI': [155, -185], 'MIN@SF': [-105, -115],
+  // left unpriced on purpose: the board has to read correctly with a gap
+  // 'CIN@WAS'
+}
+for (const game of GAMES) {
+  const line = FIXTURE_MONEYLINES[`${game.away}@${game.home}`]
+  game.away_moneyline = line ? line[0] : null
+  game.home_moneyline = line ? line[1] : null
+  game.odds_updated_at = line ? new Date(Date.now() - 1000 * 60 * 90).toISOString() : null
+}
 const WEEKS = Array.from({ length: 18 }, (_, i) => {
   const week = i + 1
   const first = GAMES.filter((g) => g.week === week && g.kickoff_at)
@@ -168,6 +185,12 @@ const TABLES = {
   survivor_picks: PICKS,
   survivor_invite: [{ invite_code: 'SURVIVE2026' }],
   survivor_games: GAMES,
+  survivor_odds_runs: [
+    { ran_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(), ok: true, games_updated: 12,
+      detail: '14 events from the book, 12 priced' },
+    { ran_at: new Date(Date.now() - 1000 * 60 * 270).toISOString(), ok: false, games_updated: 0,
+      detail: 'The Odds API returned 429' },
+  ],
   member_details: [
     { user_id: ME, real_name: 'Bryon' },
     { user_id: 'u-mike', real_name: 'Mike' },
@@ -249,8 +272,11 @@ for (const [path, name] of routes) {
   await page.goto(BASE + path, { waitUntil: 'networkidle' })
   await page.waitForTimeout(700)
   if (name === 'season') {
-    const first = page.locator('.week-head').first()
-    if (await first.count()) await first.click()
+    // Expand a finished week: an unopened one only ever shows the "hidden" note,
+    // which never exercises the who-picked-whom board.
+    const finished = page.locator('.week-row.final .week-head').first()
+    const target = (await finished.count()) ? finished : page.locator('.week-head').first()
+    if (await target.count()) await target.click()
     await page.waitForTimeout(300)
   }
   await page.screenshot({ path: `${OUT}/ui-${name}.png`, fullPage: true })

@@ -2,19 +2,44 @@ import { useMemo, useState } from 'react'
 import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { usePool } from '../context/PoolContext'
 import { formatDeadline } from '../lib/time'
-import { WEEK_STATUS_LABELS } from '../lib/types'
+import { WEEK_STATUS_LABELS, type PickRow } from '../lib/types'
+
+/** Who took whom, biggest crowd first — the view that answers "did anyone else take them?" */
+function groupByTeam(weekPicks: PickRow[]): { team: string | null; userIds: string[] }[] {
+  const groups = new Map<string | null, string[]>()
+  for (const pick of weekPicks) {
+    const key = pick.is_bye ? null : pick.team
+    const list = groups.get(key) ?? []
+    list.push(pick.user_id)
+    groups.set(key, list)
+  }
+  return [...groups.entries()]
+    .map(([team, userIds]) => ({ team, userIds }))
+    .sort(
+      (a, b) =>
+        b.userIds.length - a.userIds.length || (a.team ?? 'zzz').localeCompare(b.team ?? 'zzz'),
+    )
+}
 
 export default function SeasonPage() {
   useDocumentTitle('Season')
 
-  const { weeks, picks, results, teams, profiles, loading, error } = usePool()
+  const { weeks, picks, results, teams, pool, loading, error } = usePool()
   const [openWeek, setOpenWeek] = useState<number | null>(null)
 
   const teamName = useMemo(() => new Map(teams.map((t) => [t.abbr, t.name])), [teams])
-  const nameById = useMemo(
-    () => new Map(profiles.map((p) => [p.id, p.display_name])),
-    [profiles],
-  )
+  // Same names the standings use: pool team name, with the real first name beside
+  // it, so a screen name nobody recognises is still attributable.
+  const nameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const standing of pool?.standings ?? []) {
+      map.set(
+        standing.userId,
+        standing.realName ? `${standing.name} (${standing.realName})` : standing.name,
+      )
+    }
+    return map
+  }, [pool])
   const resultFor = useMemo(() => {
     const map = new Map<string, string>()
     for (const r of results) map.set(`${r.week}:${r.team}`, r.outcome)
@@ -29,7 +54,7 @@ export default function SeasonPage() {
       <div className="page-kicker">Week by week</div>
       <h1 className="page-title">Season</h1>
       <p className="board-help">
-        Everyone's picks stay hidden until a week locks. Tap a week to see the board.
+        Everyone's picks stay hidden until a week locks. Tap a week to see who took whom.
       </p>
 
       <div className="week-list">
@@ -65,34 +90,38 @@ export default function SeasonPage() {
                   ) : weekPicks.length === 0 ? (
                     <p className="muted small">No picks were made this week.</p>
                   ) : (
-                    <table className="week-table">
-                      <tbody>
-                        {weekPicks
-                          .slice()
-                          .sort((a, b) =>
-                            (nameById.get(a.user_id) ?? '').localeCompare(nameById.get(b.user_id) ?? ''),
-                          )
-                          .map((pick) => {
-                            const outcome = pick.team ? resultFor.get(`${week.week}:${pick.team}`) : null
-                            return (
-                              <tr key={pick.id}>
-                                <td className="wt-name">{nameById.get(pick.user_id) ?? 'Member'}</td>
-                                <td className="wt-team">
-                                  {pick.is_bye ? 'BYE week' : teamName.get(pick.team ?? '') ?? pick.team}
-                                </td>
-                                <td className={`wt-result ${outcome ?? 'pending'}`}>
-                                  {/* a glyph as well as colour, so the result reads
-                                      without relying on red-vs-green */}
-                                  {outcome === 'win' && '✓ WIN'}
-                                  {outcome === 'loss' && '✕ LOSS'}
-                                  {outcome === 'tie' && '= TIE'}
-                                  {!outcome && (pick.is_bye ? '—' : 'pending')}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                      </tbody>
-                    </table>
+                    <div className="pick-groups">
+                      {groupByTeam(weekPicks).map((group) => {
+                        const outcome = group.team ? resultFor.get(`${week.week}:${group.team}`) : null
+                        return (
+                          <div key={group.team ?? 'bye'} className="pick-group">
+                            <div className="pick-group-head">
+                              <span className="pick-group-team">
+                                {group.team ? teamName.get(group.team) ?? group.team : 'BYE week'}
+                              </span>
+                              <span className="pick-group-count">
+                                {group.userIds.length}
+                                {group.userIds.length === 1 ? ' pick' : ' picks'}
+                              </span>
+                              <span className={`wt-result ${outcome ?? 'pending'}`}>
+                                {/* a glyph as well as colour, so the result reads
+                                    without relying on red-vs-green */}
+                                {outcome === 'win' && '✓ WIN'}
+                                {outcome === 'loss' && '✕ LOSS'}
+                                {outcome === 'tie' && '= TIE'}
+                                {!outcome && (group.team ? 'pending' : '—')}
+                              </span>
+                            </div>
+                            <div className="pick-group-names">
+                              {group.userIds
+                                .map((id) => nameById.get(id) ?? 'Member')
+                                .sort((a, b) => a.localeCompare(b))
+                                .join(', ')}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   )}
                 </div>
               )}

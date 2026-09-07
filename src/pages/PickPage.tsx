@@ -7,6 +7,7 @@ import { usePool } from '../context/PoolContext'
 import PaymentNotice from '../components/PaymentNotice'
 import { pickErrorMessage } from '../lib/errors'
 import { countdownText, formatDeadline, formatKickoff } from '../lib/time'
+import { formatChance, oddsAreFresh, teamWinChance } from '../lib/odds'
 import type { Game, Team } from '../lib/types'
 
 export default function PickPage() {
@@ -72,6 +73,27 @@ export default function PickPage() {
     () => [...pickCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 5),
     [pickCounts],
   )
+
+  const oddsShown = useMemo(
+    () => games.some((game) => game.week === week?.week && oddsAreFresh(game.odds_updated_at)),
+    [games, week],
+  )
+
+  const myPickChance = useMemo(() => {
+    if (!myPick?.team) return null
+    const game = gameByTeam.get(myPick.team)
+    if (!game || !oddsAreFresh(game.odds_updated_at)) return null
+    return teamWinChance(myPick.team, game)
+  }, [myPick, gameByTeam])
+
+  /**
+   * The bookmakers' chance that this team wins, or null when there is nothing
+   * trustworthy to show — no game, no odds yet, or odds old enough to be wrong.
+   */
+  function chanceFor(team: Team, game: Game | undefined): number | null {
+    if (!game || !oddsAreFresh(game.odds_updated_at)) return null
+    return teamWinChance(team.abbr, game)
+  }
 
   function matchup(team: Team, game: Game | undefined) {
     if (!game) return 'BYE week'
@@ -192,6 +214,12 @@ export default function PickPage() {
                 },
                 gameByTeam.get(myPick.team),
               )}
+              {myPickChance !== null && (
+                <span className="current-pick-chance">
+                  {' · '}
+                  {formatChance(myPickChance)} to win
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -243,6 +271,7 @@ export default function PickPage() {
           <p className="board-help">
             Teams you have already used are greyed out — every pick burns that team for the rest of
             the season, win or lose. Teams on their bye cannot be picked.
+            {oddsShown && ' “win” is the sportsbooks’ consensus chance; “picked” is the share of this pool already on that team.'}
           </p>
           <div className="team-board">
             {grouped.map(([division, list]) => (
@@ -254,6 +283,7 @@ export default function PickPage() {
                     const onBye = !game
                     const used = usedAbbrs.has(team.abbr)
                     const selected = myPick?.team === team.abbr
+                    const chance = chanceFor(team, game)
                     return (
                       <button
                         key={team.abbr}
@@ -273,15 +303,30 @@ export default function PickPage() {
                           <span className="team-name">{team.name}</span>
                           <span className="team-matchup">{matchup(team, game)}</span>
                         </span>
-                        {!onBye && !used && totalPicksIn > 0 && (pickCounts.get(team.abbr) ?? 0) > 0 && (
-                          <span className="team-share" title={`${pickCounts.get(team.abbr)} of ${totalPicksIn} picks`}>
-                            {Math.round(((pickCounts.get(team.abbr) ?? 0) / totalPicksIn) * 100)}%
-                          </span>
-                        )}
-                        {onBye && <span className="team-flag">bye</span>}
-                        {!onBye && used && <span className="team-flag">used</span>}
-                        {selected && <span className="team-flag picked">picked</span>}
-                        {saving === team.abbr && <span className="team-flag">saving…</span>}
+                        {/* One right-hand column: a flag and two percentages side by
+                            side used to collide with a long team name. */}
+                        <span className="team-meta">
+                          {selected && <span className="team-flag picked">picked</span>}
+                          {saving === team.abbr && <span className="team-flag">saving…</span>}
+                          {onBye && <span className="team-flag">bye</span>}
+                          {!onBye && used && <span className="team-flag">used</span>}
+                          {!onBye && !used && chance !== null && (
+                            <span
+                              className="team-chance"
+                              title={`Sportsbooks give ${team.name} a ${formatChance(chance)} chance to win this game`}
+                            >
+                              {formatChance(chance)} win
+                            </span>
+                          )}
+                          {!onBye && !used && totalPicksIn > 0 && (pickCounts.get(team.abbr) ?? 0) > 0 && (
+                            <span
+                              className="team-share"
+                              title={`${pickCounts.get(team.abbr)} of ${totalPicksIn} picks in this pool`}
+                            >
+                              {Math.round(((pickCounts.get(team.abbr) ?? 0) / totalPicksIn) * 100)}% picked
+                            </span>
+                          )}
+                        </span>
                       </button>
                     )
                   })}
