@@ -6,7 +6,7 @@ import { usePool } from '../context/PoolContext'
 import { formatDeadline, toDatetimeLocal } from '../lib/time'
 import { safePaymentUrl } from '../lib/payments'
 import { oddsAreFresh } from '../lib/odds'
-import type { OddsRun, Outcome, Week, WeekStatus } from '../lib/types'
+import type { FeedRun, Outcome, Week, WeekStatus } from '../lib/types'
 
 export default function AdminPage() {
   useDocumentTitle('Admin')
@@ -30,15 +30,18 @@ export default function AdminPage() {
     if (selectedWeek === null && pool?.currentWeek) setSelectedWeek(pool.currentWeek.week)
   }, [pool, selectedWeek])
 
-  const [oddsRuns, setOddsRuns] = useState<OddsRun[]>([])
+  const [feedRuns, setFeedRuns] = useState<FeedRun[]>([])
   useEffect(() => {
     supabase
-      .from('survivor_odds_runs')
-      .select('ran_at, ok, games_updated, detail')
+      .from('survivor_feed_runs')
+      .select('ran_at, kind, ok, games_updated, detail, credits_remaining')
       .order('ran_at', { ascending: false })
-      .limit(5)
-      .then(({ data }) => setOddsRuns((data as OddsRun[]) ?? []))
+      .limit(6)
+      .then(({ data }) => setFeedRuns((data as FeedRun[]) ?? []))
   }, [])
+
+  // The allowance resets on the 1st; the newest run that reported one is current.
+  const creditsLeft = feedRuns.find((run) => run.credits_remaining !== null)?.credits_remaining
 
   const week = useMemo(
     () => weeks.find((w) => w.week === selectedWeek) ?? null,
@@ -408,35 +411,45 @@ export default function AdminPage() {
       </section>
 
       <section className="admin-block">
-        <h2 className="admin-heading">Odds feed</h2>
+        <h2 className="admin-heading">Data feeds</h2>
         <p className="muted small">
-          Win percentages come from a sportsbook feed that refreshes every three hours. Nobody
-          has to run it — this is only here so a feed that quietly stopped is visible.
+          Two scheduled jobs, both every six hours. <strong>Odds</strong> sets the win
+          percentages on the pick board. <strong>Scores</strong> fills in results once games
+          finish — it never overwrites a result you entered, and never touches a week you have
+          already marked final. Nobody has to run either; this is here so a feed that quietly
+          stopped is visible.
         </p>
-        {oddsRuns.length === 0 ? (
+        {creditsLeft !== undefined && creditsLeft !== null && (
+          <p className={`muted small${creditsLeft < 60 ? ' credits-low' : ''}`}>
+            {creditsLeft} API credits left this month (the allowance resets on the 1st).
+            {creditsLeft < 60 && ' Running low — the feeds will stop until it resets.'}
+          </p>
+        )}
+        {feedRuns.length === 0 ? (
           <p className="muted small">
-            It has not run yet. It starts working as soon as ODDS_API_KEY is set in the Supabase
+            Neither has run yet. They start working as soon as ODDS_API_KEY is set in the Supabase
             dashboard under Edge Functions → Secrets.
           </p>
         ) : (
           <div className="odds-runs">
-            {oddsRuns.map((run) => (
+            {feedRuns.map((run) => (
               <div key={run.ran_at} className={`odds-run ${run.ok ? 'ok' : 'bad'}`}>
                 <span className="odds-run-when">{formatDeadline(run.ran_at)}</span>
+                <span className={`feed-kind ${run.kind}`}>{run.kind}</span>
                 <span className="odds-run-what">
-                  {run.ok ? `${run.games_updated} games priced` : 'failed'}
-                  {run.detail ? ` — ${run.detail}` : ''}
+                  {run.ok ? run.detail ?? 'ok' : `failed${run.detail ? ` — ${run.detail}` : ''}`}
                 </span>
               </div>
             ))}
           </div>
         )}
-        {oddsRuns.length > 0 && !oddsAreFresh(oddsRuns.find((run) => run.ok)?.ran_at) && (
-          <p className="muted small">
-            Nothing has come in for over a day, so the board is hiding win percentages rather than
-            showing stale ones.
-          </p>
-        )}
+        {feedRuns.some((run) => run.kind === 'odds') &&
+          !oddsAreFresh(feedRuns.find((run) => run.kind === 'odds' && run.ok)?.ran_at) && (
+            <p className="muted small">
+              No odds have come in for over a day, so the board is hiding win percentages rather
+              than showing stale ones.
+            </p>
+          )}
       </section>
 
       <section className="admin-block">

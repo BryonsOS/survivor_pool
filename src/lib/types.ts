@@ -141,10 +141,13 @@ export interface Standing {
   history: PickHistoryEntry[]
 }
 
-/** One run of the scheduled odds fetch. Commissioner-visible so a silent failure isn't. */
-export interface OddsRun {
+/** One run of a scheduled feed. Commissioner-visible so a silent failure isn't. */
+export interface FeedRun {
   ran_at: string
+  kind: 'odds' | 'scores'
   ok: boolean
   games_updated: number
   detail: string | null
+  /** The month's remaining API allowance, as reported by the last call. */
+  credits_remaining: number | null
 }

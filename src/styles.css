@@ -511,3 +511,9 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .odds-run-when { color: var(--text-dim); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 .odds-run-what { min-width: 0; }
 .odds-run.bad .odds-run-what { color: var(--red); }
+.feed-kind {
+  font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em;
+  font-size: 10px; flex: 0 0 46px; color: var(--text-dim);
+}
+.feed-kind.scores { color: var(--turf); }
+.credits-low { color: var(--amber); }

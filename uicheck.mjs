@@ -185,11 +185,14 @@ const TABLES = {
   survivor_picks: PICKS,
   survivor_invite: [{ invite_code: 'SURVIVE2026' }],
   survivor_games: GAMES,
-  survivor_odds_runs: [
-    { ran_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(), ok: true, games_updated: 12,
-      detail: '14 events from the book, 12 priced' },
-    { ran_at: new Date(Date.now() - 1000 * 60 * 270).toISOString(), ok: false, games_updated: 0,
-      detail: 'The Odds API returned 429' },
+  survivor_feed_runs: [
+    { ran_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(), kind: 'scores', ok: true,
+      games_updated: 26, detail: '13 finished games read, 26 results recorded',
+      credits_remaining: 388 },
+    { ran_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(), kind: 'odds', ok: true,
+      games_updated: 12, detail: '14 events from the book, 12 priced', credits_remaining: 390 },
+    { ran_at: new Date(Date.now() - 1000 * 60 * 270).toISOString(), kind: 'odds', ok: false,
+      games_updated: 0, detail: 'The Odds API returned 429', credits_remaining: null },
   ],
   member_details: [
     { user_id: ME, real_name: 'Bryon' },

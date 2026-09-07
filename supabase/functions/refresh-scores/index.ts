@@ -1,33 +1,37 @@
 /**
- * refresh-odds — pulls NFL moneylines from The Odds API into survivor_games.
+ * refresh-scores — records finished games into survivor_results.
  *
- * Runs on a schedule (see supabase/migrations/009_schedule_odds_refresh.sql). It is
- * deployed with JWT verification off, because pg_cron has no user to sign in as, so
- * the first thing it does is check a shared secret that only the database knows.
+ * Runs on a schedule (see supabase/migrations/011_auto_results.sql) and, like
+ * refresh-odds, checks a shared secret the database holds because pg_cron has no
+ * user to sign in as.
  *
- * Books disagree, so the numbers stored are a consensus: each bookmaker's pair is
- * stripped of its margin first, the median across books is taken, and the result is
- * written back as a moneyline pair. Storing a moneyline rather than a percentage
- * keeps the column meaning the same thing whether a human or this job filled it in.
+ * It only ever adds. survivor_apply_scores() skips any week already marked final
+ * and never overwrites an existing row, so a commissioner's correction survives
+ * every later run. Marking a week final stays a person's decision — that is what
+ * costs somebody a strike.
  */
 
-const ODDS_ENDPOINT = 'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/odds/'
+/** Completed games from up to three days back; that window covers Thursday through Monday night. */
+const SCORES_ENDPOINT =
+  'https://api.the-odds-api.com/v4/sports/americanfootball_nfl/scores/'
+const DAYS_FROM = 3
 
-/** The free plan allows 500 calls a month. Refuse to spend them faster than this. */
-const MIN_MINUTES_BETWEEN_RUNS = 30
+/** The free plan allows 500 credits a month, and this call costs 2. */
+const MIN_MINUTES_BETWEEN_RUNS = 60
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const ODDS_API_KEY = Deno.env.get('ODDS_API_KEY') ?? ''
 
-interface Outcome {
+interface ScoreEntry {
   name: string
-  price: number
+  score: string | number | null
 }
-interface Event {
+interface ScoredEvent {
   home_team: string
   away_team: string
-  bookmakers?: { markets?: { key: string; outcomes?: Outcome[] }[] }[]
+  completed?: boolean
+  scores?: ScoreEntry[] | null
 }
 
 function db(path: string, init: RequestInit = {}) {
@@ -62,58 +66,18 @@ function secretsMatch(expected: string, offered: string): boolean {
 function log(fields: Record<string, unknown>) {
   return db('survivor_feed_runs', {
     method: 'POST',
-    body: JSON.stringify({ kind: 'odds', ...fields }),
+    body: JSON.stringify({ kind: 'scores', ...fields }),
   })
 }
 
-function impliedProbability(moneyline: number): number {
-  if (!Number.isFinite(moneyline) || moneyline === 0) return 0
-  return moneyline > 0 ? 100 / (moneyline + 100) : -moneyline / (-moneyline + 100)
-}
-
-/** Inverse of the above. 0.5 becomes -100, the pick-'em price. */
-function probabilityToMoneyline(p: number): number {
-  const clamped = Math.min(Math.max(p, 0.005), 0.995)
-  return clamped >= 0.5
-    ? -Math.round((100 * clamped) / (1 - clamped))
-    : Math.round((100 * (1 - clamped)) / clamped)
-}
-
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
-}
-
-/**
- * The consensus chance that the home team wins, with each book's margin removed
- * before it gets a vote. Null when no book quoted both sides.
- */
-function consensusHomeProbability(event: Event): number | null {
-  const votes: number[] = []
-
-  for (const book of event.bookmakers ?? []) {
-    const h2h = book.markets?.find((market) => market.key === 'h2h')
-    if (!h2h) continue
-
-    const homePrice = h2h.outcomes?.find((o) => o.name === event.home_team)?.price
-    const awayPrice = h2h.outcomes?.find((o) => o.name === event.away_team)?.price
-    if (typeof homePrice !== 'number' || typeof awayPrice !== 'number') continue
-
-    const home = impliedProbability(homePrice)
-    const away = impliedProbability(awayPrice)
-    const total = home + away
-    if (total <= 0) continue
-
-    votes.push(home / total)
-  }
-
-  return votes.length ? median(votes) : null
+function scoreOf(event: ScoredEvent, team: string): number | null {
+  const entry = event.scores?.find((s) => s.name === team)
+  if (!entry || entry.score === null || entry.score === undefined) return null
+  const value = Number(entry.score)
+  return Number.isFinite(value) ? value : null
 }
 
 Deno.serve(async (req: Request) => {
-  // 1. Only the scheduled job gets in.
-  //
   // Failing to read the secret is our problem, not the caller's. Reporting it as
   // "not authorised" would make a transient blip look exactly like a rejected
   // caller, and the run would vanish without a trace in the feed log.
@@ -142,20 +106,31 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'ODDS_API_KEY is not set' }, 500)
   }
 
-  // 2. Do not burn the monthly allowance on a retry loop.
+  const force = new URL(req.url).searchParams.get('force') === '1'
+
   const lastRun = await db(
-    'survivor_feed_runs?select=ran_at&kind=eq.odds&ok=is.true&order=ran_at.desc&limit=1',
+    'survivor_feed_runs?select=ran_at&kind=eq.scores&ok=is.true&order=ran_at.desc&limit=1',
   )
     .then((r) => r.json())
     .catch(() => null)
   const lastAt = lastRun?.[0]?.ran_at ? new Date(lastRun[0].ran_at).getTime() : 0
-  const force = new URL(req.url).searchParams.get('force') === '1'
   if (!force && Date.now() - lastAt < MIN_MINUTES_BETWEEN_RUNS * 60_000) {
     return json({ skipped: 'ran recently', last_run: lastRun[0].ran_at })
   }
 
+  // Nothing has kicked off lately — do not spend a credit to be told so. This is
+  // what keeps the job free for the eight months there is no football.
+  const anyGames = await db('rpc/survivor_recent_games_exist', {
+    method: 'POST',
+    body: '{}',
+  })
+    .then((r) => r.json())
+    .catch(() => true)
+  if (!force && anyGames === false) {
+    return json({ skipped: 'no games in the last three days' })
+  }
+
   try {
-    // 3. The Odds API names teams in full; the schedule uses abbreviations.
     const teams: { abbr: string; name: string }[] = await db(
       'survivor_teams?select=abbr,name',
     ).then((r) => r.json())
@@ -163,11 +138,9 @@ Deno.serve(async (req: Request) => {
 
     const params = new URLSearchParams({
       apiKey: ODDS_API_KEY,
-      regions: 'us',
-      markets: 'h2h',
-      oddsFormat: 'american',
+      daysFrom: String(DAYS_FROM),
     })
-    const response = await fetch(`${ODDS_ENDPOINT}?${params}`)
+    const response = await fetch(`${SCORES_ENDPOINT}?${params}`)
     // The month's remaining allowance rides along on every response.
     const creditsHeader = response.headers.get('x-requests-remaining')
     const creditsRemaining = creditsHeader === null ? null : Number(creditsHeader)
@@ -176,51 +149,49 @@ Deno.serve(async (req: Request) => {
       // The body can echo the query string, so report the status only.
       throw new Error(`The Odds API returned ${response.status}`)
     }
-    const events: Event[] = await response.json()
+    const events: ScoredEvent[] = await response.json()
 
     const payload: {
       away: string
       home: string
-      away_ml: number
-      home_ml: number
+      away_score: number
+      home_score: number
     }[] = []
-    let unmatched = 0
+    let unfinished = 0
 
     for (const event of events) {
-      const home = abbrByName.get(event.home_team)
-      const away = abbrByName.get(event.away_team)
-      if (!home || !away) {
-        unmatched++
+      if (!event.completed) {
+        unfinished++
         continue
       }
-      const homeProbability = consensusHomeProbability(event)
-      if (homeProbability === null) continue
+      const home = abbrByName.get(event.home_team)
+      const away = abbrByName.get(event.away_team)
+      if (!home || !away) continue
 
-      payload.push({
-        away,
-        home,
-        home_ml: probabilityToMoneyline(homeProbability),
-        away_ml: probabilityToMoneyline(1 - homeProbability),
-      })
+      const homeScore = scoreOf(event, event.home_team)
+      const awayScore = scoreOf(event, event.away_team)
+      if (homeScore === null || awayScore === null) continue
+
+      payload.push({ away, home, away_score: awayScore, home_score: homeScore })
     }
 
-    const updated: number = await db('rpc/survivor_apply_odds', {
+    const recorded: number = await db('rpc/survivor_apply_scores', {
       method: 'POST',
-      body: JSON.stringify({ p_odds: payload }),
+      body: JSON.stringify({ p_scores: payload }),
     }).then((r) => r.json())
 
     const detail =
-      `${events.length} events from the book, ${payload.length} priced` +
-      (unmatched ? `, ${unmatched} with unrecognised team names` : '')
+      `${payload.length} finished games read, ${recorded} results recorded` +
+      (unfinished ? `, ${unfinished} still in progress` : '')
 
     await log({
       ok: true,
-      games_updated: updated,
+      games_updated: recorded,
       detail,
       credits_remaining: Number.isFinite(creditsRemaining) ? creditsRemaining : null,
     })
 
-    return json({ ok: true, games_updated: updated, detail })
+    return json({ ok: true, results_recorded: recorded, detail })
   } catch (error) {
     const detail = String(error instanceof Error ? error.message : error).slice(0, 500)
     await log({ ok: false, detail })

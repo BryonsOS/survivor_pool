@@ -134,20 +134,53 @@ side by side they are easy to confuse.
 Where the number comes from:
 
 - A scheduled Edge Function (`supabase/functions/refresh-odds`) pulls head-to-head
-  moneylines from [The Odds API](https://the-odds-api.com) every three hours — 240
-  calls a month against a 500-call free allowance. `pg_cron` triggers it; the function
-  refuses to run twice within thirty minutes, so a retry storm cannot drain the quota.
+  moneylines from [The Odds API](https://the-odds-api.com) every six hours. `pg_cron`
+  triggers it; the function refuses to run twice within thirty minutes, so a retry storm
+  cannot drain the quota.
 - Books quote a margin: the two sides of a game imply more than 100% between them. Each
   book's pair is normalised back to 100% before it gets a vote, and the median across
   books is stored. That arithmetic is in `src/lib/odds.ts` and unit tested.
 - Odds older than 36 hours are not shown at all. A wrong number is worse than no number,
   and a game with no price simply shows no percentage.
-- **Admin → Odds feed** lists the last five runs. It exists so a feed that quietly
-  stopped is visible rather than silently absent.
+- **Admin → Data feeds** lists recent runs of both jobs and the API credits left this
+  month. It exists so a feed that quietly stopped is visible rather than silently absent.
 
 The key lives in Supabase (Edge Functions → Secrets, `ODDS_API_KEY`), never in this
 repository. `pg_cron` authenticates to the function with a shared secret generated inside
 the database by migration `008`, which is also never written down outside it.
+
+## Results fill themselves in
+
+The same API reports finished games, so `supabase/functions/refresh-scores` records
+them into `survivor_results` — the sixteen rows that used to be typed in by hand every
+Monday.
+
+Two rules keep the job from ever undoing a person, both enforced in
+`survivor_apply_scores()` rather than in the job:
+
+- a week already marked **final** is never touched — that is the commissioner's sign-off;
+- an existing result is never overwritten, so a correction entered by hand sticks
+  through every later run.
+
+Marking a week final stays manual, and stays the thing that actually costs a strike.
+Results appearing early is harmless; scoring the week is a decision.
+
+The job skips the API call entirely when no game has kicked off in the last three days,
+so it costs nothing for the eight months of the year without football.
+
+### The credit budget
+
+The free plan is 500 credits a month, resetting on the 1st. Odds cost 1 credit a call,
+scores cost 2 (the completed-games window is the expensive part).
+
+| Job | Every | Cost | Per month |
+|---|---|---|---|
+| `refresh-odds` | 6 hours | 1 | ~120 |
+| `refresh-scores` | 6 hours | 2 | ~240 in season, 0 out of it |
+| | | | **~360 of 500** |
+
+That leaves headroom to run either by hand. Both jobs record the remaining balance from
+the API's own response header, so Admin → Data feeds shows a number rather than a guess.
 
 ## Who picked whom
 
@@ -236,9 +269,13 @@ download Playwright's own build.
 - Marking a week **final** automatically opens the next one.
 - Only teams somebody actually picked appear in the results list — you never enter 32
   results for a week.
-- Results are visible as soon as you enter them, but nothing costs a strike until you mark
-  the week final. That makes "final" the deliberate sign-off.
-- The odds feed needs one thing done by hand, once: set `ODDS_API_KEY` in the Supabase
+- Results are visible as soon as they land — entered by you or by the scores feed — but
+  nothing costs a strike until you mark the week final. That makes "final" the deliberate
+  sign-off, and it is why the feed refuses to touch a week that already has it.
+- Both data feeds need one thing done by hand, once: set `ODDS_API_KEY` in the Supabase
   dashboard under **Edge Functions → Secrets**, using a free key from
-  [the-odds-api.com](https://the-odds-api.com). Until it is set, **Admin → Odds feed**
-  says so and the board simply shows no percentages.
+  [the-odds-api.com](https://the-odds-api.com). Until it is set, **Admin → Data feeds**
+  says so, the board shows no percentages, and results stay manual.
+- Between the self-enforcing deadline and the scores feed, the weekly job is down to
+  **mark the week final** — which opens the next week. Locking a week early still works
+  and is what reveals everyone's picks on the Season page.
