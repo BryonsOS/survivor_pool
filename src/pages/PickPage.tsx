@@ -246,7 +246,7 @@ export default function PickPage() {
               target="_blank"
               rel="noreferrer noopener"
             >
-              group chat ↗
+              announcements ↗
             </a>
           )}
         </div>
