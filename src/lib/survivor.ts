@@ -337,7 +337,11 @@ export function buildRules(settings: PoolSettings, teamCount: number) {
   return [
     {
       title: 'One pick a week',
-      body: `Pick a single NFL team to win each week. Picks lock at ${settings.pick_deadline_label}. Win and you advance.`,
+      body: 'Pick a single NFL team to win each week. Win and you advance.',
+    },
+    {
+      title: 'When picks lock',
+      body: `Picks lock at ${settings.pick_deadline_label}. Once your team has kicked off, that is your pick for the week — you cannot switch to a later game after watching yours. Teams that have kicked off drop off the board.`,
     },
     {
       title: 'Teams are one-time use',

@@ -517,3 +517,12 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 }
 .feed-kind.scores { color: var(--turf); }
 .credits-low { color: var(--amber); }
+
+/* ---------- rolling-lock explainer on the pick page ---------- */
+.lock-rule {
+  background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--turf);
+  border-radius: var(--radius); padding: 10px 14px; font-size: 13.5px; color: var(--text-dim);
+  line-height: 1.5;
+}
+.lock-rule strong { color: var(--text); font-weight: 600; }
+.lock-next { color: var(--text); white-space: nowrap; }

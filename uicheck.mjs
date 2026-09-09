@@ -41,7 +41,7 @@ const SETTINGS = {
   id: true, pool_name: 'SOABOS Survivor Pool', season: 2026, total_weeks: 18,
   strikes_to_eliminate: 2, tie_counts_as: 'survive', bye_weeks_per_player: 0,
   allow_buy_backs: false, buy_back_fee: 0, missed_pick_policy: 'strike',
-  entry_fee: 25, pick_deadline_label: 'the first kickoff of each week',
+  entry_fee: 25, pick_deadline_label: 'kickoff for each team, and Sunday 1:00 PM ET for everyone else',
   payout_note: 'Winner takes the pot. If more than one player is still alive after the final week, survivors split evenly.',
   payment_handle: '@Bryon-Romp',
   payment_url: 'https://venmo.com/u/Bryon-Romp',

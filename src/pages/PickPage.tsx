@@ -74,6 +74,16 @@ export default function PickPage() {
     [pickCounts],
   )
 
+  // The next team pair to come off the board, so the top of the page says when.
+  const nextKickoff = useMemo(() => {
+    if (!week) return null
+    return (
+      games
+        .filter((g) => g.week === week.week && g.kickoff_at && new Date(g.kickoff_at).getTime() > now)
+        .sort((a, b) => a.kickoff_at!.localeCompare(b.kickoff_at!))[0] ?? null
+    )
+  }, [games, week, now])
+
   const oddsShown = useMemo(
     () => games.some((game) => game.week === week?.week && oddsAreFresh(game.odds_updated_at)),
     [games, week],
@@ -178,8 +188,21 @@ export default function PickPage() {
                   ? 'Your pick is locked — game underway'
                   : 'Picks are locked — results pending'}
         </div>
-        <div className="muted">Deadline {formatDeadline(week.locks_at)}</div>
+        <div className="muted">Final deadline {formatDeadline(week.locks_at)}</div>
       </div>
+
+      {isOpen && (
+        <div className="lock-rule">
+          <strong>How locking works:</strong> each team locks at its own kickoff; everything still
+          on the board locks {formatDeadline(week.locks_at)}. Once your team has kicked off, your
+          pick is final for the week.
+          {nextKickoff && (
+            <span className="lock-next">
+              {' '}Next to lock: {nextKickoff.away} @ {nextKickoff.home} · {formatKickoff(nextKickoff.kickoff_at)}
+            </span>
+          )}
+        </div>
+      )}
 
       {entered && me && !me.paid && <PaymentNotice settings={settings} picksOpen={isOpen} />}
 
@@ -280,10 +303,8 @@ export default function PickPage() {
           )}
 
           <p className="board-help">
-            Each team locks at its own kickoff; everything still on the board locks at the Sunday
-            deadline. Once your team has kicked off, your pick is final for the week. Teams you
-            have already used are greyed out — every pick burns that team for the rest of the
-            season, win or lose. Teams on their bye cannot be picked.
+            Teams you have already used are greyed out — every pick burns that team for the rest of
+            the season, win or lose. Teams on their bye cannot be picked.
             {oddsShown && ' “win” is the sportsbooks’ consensus chance; “picked” is the share of this pool already on that team.'}
           </p>
           <div className="team-board">
