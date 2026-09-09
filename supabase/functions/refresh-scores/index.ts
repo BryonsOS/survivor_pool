@@ -46,6 +46,19 @@ function db(path: string, init: RequestInit = {}) {
   })
 }
 
+/**
+ * The Odds API occasionally answers 502/503 for a moment and is fine seconds
+ * later. One retry turns that from a red line in the commissioner's panel into
+ * nothing at all. Anything else — 401, 429, a 4xx — is not going to change on a
+ * second try, so it is returned as-is.
+ */
+async function fetchWithOneRetry(url: string): Promise<Response> {
+  const first = await fetch(url)
+  if (first.status < 500) return first
+  await new Promise((resolve) => setTimeout(resolve, 2500))
+  return fetch(url)
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -140,7 +153,7 @@ Deno.serve(async (req: Request) => {
       apiKey: ODDS_API_KEY,
       daysFrom: String(DAYS_FROM),
     })
-    const response = await fetch(`${SCORES_ENDPOINT}?${params}`)
+    const response = await fetchWithOneRetry(`${SCORES_ENDPOINT}?${params}`)
     // The month's remaining allowance rides along on every response.
     const creditsHeader = response.headers.get('x-requests-remaining')
     const creditsRemaining = creditsHeader === null ? null : Number(creditsHeader)
