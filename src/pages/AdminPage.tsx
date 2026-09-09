@@ -271,8 +271,8 @@ export default function AdminPage() {
         <h2 className="admin-heading">Reaching the pool</h2>
         <p className="muted small">
           The announcement sits at the top of everyone's pick page until you clear it — use it
-          for anything that has to be seen, like a rule change. The chat link is for everything
-          else.
+          for anything that has to be seen, like a rule change. The GroupMe link is for the push:
+          an Announcement Group that only you can post to.
         </p>
         <label className="stack-label">
           Announcement (blank to clear)
@@ -292,7 +292,7 @@ export default function AdminPage() {
           />
         </label>
         <label className="stack-label">
-          Group chat link (GroupMe, WhatsApp…)
+          GroupMe announcements link
           <input
             defaultValue={settings.chat_url ?? ''}
             placeholder="https://groupme.com/join_group/…"
@@ -301,10 +301,10 @@ export default function AdminPage() {
               const value = e.target.value.trim()
               if (value === (settings.chat_url ?? '')) return
               if (value && !safeExternalUrl(value)) {
-                setError('That chat link is not a valid http(s) URL, so it was not saved.')
+                setError('That GroupMe link is not a valid http(s) URL, so it was not saved.')
                 return
               }
-              run(value ? 'Chat link updated' : 'Chat link removed', () =>
+              run(value ? 'GroupMe link updated' : 'GroupMe link removed', () =>
                 supabase.from('survivor_settings').update({ chat_url: value || null }).eq('id', true),
               )
             }}

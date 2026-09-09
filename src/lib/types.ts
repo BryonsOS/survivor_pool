@@ -37,7 +37,7 @@ export interface PoolSettings {
   show_pick_counts: boolean
   /** Shown at the top of the pick page until the commissioner clears it. */
   announcement: string | null
-  /** The pool's group chat — a GroupMe or WhatsApp join link. */
+  /** The commissioner's one-way GroupMe Announcement Group join link. */
   chat_url: string | null
 }
 
