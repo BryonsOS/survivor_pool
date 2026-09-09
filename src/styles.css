@@ -141,12 +141,12 @@ a { color: var(--green); }
   border: 1px dashed var(--border); border-radius: var(--radius);
 }
 
-input, select {
+input, select, textarea {
   font-family: var(--font-body); font-size: 15px; padding: 10px 12px;
   border-radius: var(--radius); border: 1px solid var(--border);
   background: var(--bg); color: var(--text); width: 100%;
 }
-input:focus, select:focus { outline: none; border-color: var(--green); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--green); }
 label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-dim); }
 
 /* ---------- auth ---------- */
@@ -526,3 +526,16 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 }
 .lock-rule strong { color: var(--text); font-weight: 600; }
 .lock-next { color: var(--text); white-space: nowrap; }
+
+/* ---------- commissioner announcement ---------- */
+.announcement {
+  background: var(--green-soft); border: 1px solid var(--green); border-radius: var(--radius);
+  padding: 12px 14px; margin-bottom: 4px;
+}
+.announcement-label {
+  display: block; font-family: var(--font-display); text-transform: uppercase;
+  letter-spacing: 0.1em; font-size: 11px; color: var(--green); font-weight: 700; margin-bottom: 4px;
+}
+.announcement p { margin: 0; white-space: pre-line; line-height: 1.5; }
+.stack-label { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 13px; color: var(--text-dim); }
+.stack-label textarea, .stack-label input { font: inherit; color: var(--text); }

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { actionErrorMessage } from '../lib/errors'
 import { usePool } from '../context/PoolContext'
 import { formatDeadline, toDatetimeLocal } from '../lib/time'
-import { safePaymentUrl } from '../lib/payments'
+import { safeExternalUrl, safePaymentUrl } from '../lib/payments'
 import { oddsAreFresh } from '../lib/odds'
 import type { FeedRun, Outcome, Week, WeekStatus } from '../lib/types'
 
@@ -266,6 +266,51 @@ export default function AdminPage() {
           )}
         </section>
       )}
+
+      <section className="admin-block">
+        <h2 className="admin-heading">Reaching the pool</h2>
+        <p className="muted small">
+          The announcement sits at the top of everyone's pick page until you clear it — use it
+          for anything that has to be seen, like a rule change. The chat link is for everything
+          else.
+        </p>
+        <label className="stack-label">
+          Announcement (blank to clear)
+          <textarea
+            defaultValue={settings.announcement ?? ''}
+            placeholder="Picks now lock per team at kickoff — see the Rules page."
+            rows={2}
+            maxLength={500}
+            disabled={busy}
+            onBlur={(e) => {
+              const value = e.target.value.trim()
+              if (value === (settings.announcement ?? '')) return
+              run(value ? 'Announcement posted' : 'Announcement cleared', () =>
+                supabase.from('survivor_settings').update({ announcement: value || null }).eq('id', true),
+              )
+            }}
+          />
+        </label>
+        <label className="stack-label">
+          Group chat link (GroupMe, WhatsApp…)
+          <input
+            defaultValue={settings.chat_url ?? ''}
+            placeholder="https://groupme.com/join_group/…"
+            disabled={busy}
+            onBlur={(e) => {
+              const value = e.target.value.trim()
+              if (value === (settings.chat_url ?? '')) return
+              if (value && !safeExternalUrl(value)) {
+                setError('That chat link is not a valid http(s) URL, so it was not saved.')
+                return
+              }
+              run(value ? 'Chat link updated' : 'Chat link removed', () =>
+                supabase.from('survivor_settings').update({ chat_url: value || null }).eq('id', true),
+              )
+            }}
+          />
+        </label>
+      </section>
 
       <section className="admin-block">
         <h2 className="admin-heading">Entry fees</h2>

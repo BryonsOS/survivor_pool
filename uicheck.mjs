@@ -48,6 +48,8 @@ const SETTINGS = {
   payment_instructions: 'Venmo your entry fee to the commissioner before Week 1.',
   require_payment_to_pick: false,
   show_pick_counts: true,
+  announcement: 'Picks now lock per team at kickoff. Everything else locks Sunday 1:00 PM ET — see the Rules page.',
+  chat_url: 'https://groupme.com/join_group/117370740/e8xeg0Oc',
 }
 
 // Real 2026 games for weeks 9-11, so the board shows true opponents and byes.

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { usePool } from '../context/PoolContext'
 import PaymentNotice from '../components/PaymentNotice'
+import { safeExternalUrl } from '../lib/payments'
 import { pickErrorMessage } from '../lib/errors'
 import { countdownText, formatDeadline, formatKickoff } from '../lib/time'
 import { formatChance, oddsAreFresh, teamWinChance } from '../lib/odds'
@@ -175,6 +176,13 @@ export default function PickPage() {
       <div className="page-kicker">{settings.season} Season · Week {week.week}</div>
       <h1 className="page-title">{myPick ? 'Your pick is in' : 'Make your pick'}</h1>
 
+      {settings.announcement?.trim() && (
+        <div className="announcement" role="status">
+          <span className="announcement-label">From the commissioner</span>
+          <p>{settings.announcement}</p>
+        </div>
+      )}
+
       <div className="pick-status">
         <div className={`status-pill status-${isOpen ? week.status : week.status === 'open' ? 'locked' : week.status}`}>
           {isOpen && <span className="live-dot" />}
@@ -231,6 +239,16 @@ export default function PickPage() {
           <Link to="/standings" className="inline-link">
             standings →
           </Link>
+          {safeExternalUrl(settings.chat_url) && (
+            <a
+              className="inline-link"
+              href={safeExternalUrl(settings.chat_url)!}
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              group chat ↗
+            </a>
+          )}
         </div>
       )}
 

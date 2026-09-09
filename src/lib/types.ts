@@ -35,6 +35,10 @@ export interface PoolSettings {
   require_payment_to_pick: boolean
   /** Show how the pool is leaning before a week locks. */
   show_pick_counts: boolean
+  /** Shown at the top of the pick page until the commissioner clears it. */
+  announcement: string | null
+  /** The pool's group chat — a GroupMe or WhatsApp join link. */
+  chat_url: string | null
 }
 
 export interface Team {
