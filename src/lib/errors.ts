@@ -34,6 +34,12 @@ export function pickErrorMessage(
       if (raw.includes('Entry fee')) {
         return 'Your entry fee has not been recorded yet, so picks are locked. Pay the commissioner and they will unlock it.'
       }
+      if (raw.includes('already started')) {
+        return 'Your pick is locked — that game has already started.'
+      }
+      if (raw.includes('already kicked off')) {
+        return `${team} have already kicked off this week, so they cannot be picked.`
+      }
       return `${team} are on a bye${week ? ` in Week ${week}` : ''} — they cannot win, so the pick was not saved.`
     case FK_VIOLATION:
       return `${team} is not a valid pick for this week.`

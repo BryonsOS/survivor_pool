@@ -120,7 +120,12 @@ export default function PickPage() {
   // been flipped to 'locked'. Mirror that here so the board closes itself rather
   // than letting someone click into a rejection. `now` ticks every 30 seconds.
   const deadlinePassed = week.locks_at !== null && now >= new Date(week.locks_at).getTime()
-  const isOpen = week.status === 'open' && !deadlinePassed
+  // Rolling locks: a team is off the board once its game kicks off, and a pick on
+  // a team that has kicked off is frozen for the week — the database enforces both.
+  const gameStarted = (game: Game | undefined) =>
+    Boolean(game?.kickoff_at) && now >= new Date(game!.kickoff_at!).getTime()
+  const pickFrozen = Boolean(myPick?.team) && gameStarted(gameByTeam.get(myPick!.team!))
+  const isOpen = week.status === 'open' && !deadlinePassed && !pickFrozen
   const eliminated = me?.status === 'eliminated'
   const entered = Boolean(me)
 
@@ -169,7 +174,9 @@ export default function PickPage() {
               ? 'Week final'
               : week.status === 'upcoming'
                 ? 'Not open yet'
-                : 'Picks are locked — results pending'}
+                : pickFrozen && !deadlinePassed
+                  ? 'Your pick is locked — game underway'
+                  : 'Picks are locked — results pending'}
         </div>
         <div className="muted">Deadline {formatDeadline(week.locks_at)}</div>
       </div>
@@ -273,8 +280,10 @@ export default function PickPage() {
           )}
 
           <p className="board-help">
-            Teams you have already used are greyed out — every pick burns that team for the rest of
-            the season, win or lose. Teams on their bye cannot be picked.
+            Each team locks at its own kickoff; everything still on the board locks at the Sunday
+            deadline. Once your team has kicked off, your pick is final for the week. Teams you
+            have already used are greyed out — every pick burns that team for the rest of the
+            season, win or lose. Teams on their bye cannot be picked.
             {oddsShown && ' “win” is the sportsbooks’ consensus chance; “picked” is the share of this pool already on that team.'}
           </p>
           <div className="team-board">
@@ -285,21 +294,24 @@ export default function PickPage() {
                   {list.map((team) => {
                     const game = gameByTeam.get(team.abbr)
                     const onBye = !game
+                    const started = gameStarted(game)
                     const used = usedAbbrs.has(team.abbr)
                     const selected = myPick?.team === team.abbr
                     const chance = chanceFor(team, game)
                     return (
                       <button
                         key={team.abbr}
-                        className={`team-btn${selected ? ' selected' : ''}${used || onBye ? ' used' : ''}`}
-                        disabled={used || onBye || saving !== null}
+                        className={`team-btn${selected ? ' selected' : ''}${used || onBye || started ? ' used' : ''}`}
+                        disabled={used || onBye || started || saving !== null}
                         onClick={() => choose(team)}
                         title={
                           onBye
                             ? `${team.name} are on a bye this week`
                             : used
                               ? `${team.name} already used`
-                              : `Pick ${team.name} — ${matchup(team, game)}`
+                              : started
+                                ? `${team.name} have already kicked off`
+                                : `Pick ${team.name} — ${matchup(team, game)}`
                         }
                       >
                         <span className="team-abbr">{team.abbr}</span>
@@ -314,7 +326,8 @@ export default function PickPage() {
                           {saving === team.abbr && <span className="team-flag">saving…</span>}
                           {onBye && <span className="team-flag">bye</span>}
                           {!onBye && used && <span className="team-flag">used</span>}
-                          {!onBye && !used && chance !== null && (
+                          {!onBye && !used && started && <span className="team-flag">kicked off</span>}
+                          {!onBye && !used && !started && chance !== null && (
                             <span
                               className="team-chance"
                               title={`Sportsbooks give ${team.name} a ${formatChance(chance)} chance to win this game`}
@@ -322,7 +335,7 @@ export default function PickPage() {
                               {formatChance(chance)} win
                             </span>
                           )}
-                          {!onBye && !used && totalPicksIn > 0 && (pickCounts.get(team.abbr) ?? 0) > 0 && (
+                          {!onBye && !used && !started && totalPicksIn > 0 && (pickCounts.get(team.abbr) ?? 0) > 0 && (
                             <span
                               className="team-share"
                               title={`${pickCounts.get(team.abbr)} of ${totalPicksIn} picks in this pool`}

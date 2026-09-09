@@ -109,6 +109,10 @@ const FIXTURE_MONEYLINES = {
   // left unpriced on purpose: the board has to read correctly with a gap
   // 'CIN@WAS'
 }
+// Thursday night has already kicked off: IND and HOU must be off the board.
+const THURSDAY = GAMES.find((g) => g.week === OPEN_WEEK && g.away === 'IND' && g.home === 'HOU')
+THURSDAY.kickoff_at = new Date(Date.now() - 1000 * 60 * 40).toISOString()
+
 for (const game of GAMES) {
   const line = FIXTURE_MONEYLINES[`${game.away}@${game.home}`]
   game.away_moneyline = line ? line[0] : null
@@ -283,6 +287,15 @@ for (const [path, name] of routes) {
     await page.waitForTimeout(300)
   }
   await page.screenshot({ path: `${OUT}/ui-${name}.png`, fullPage: true })
+  if (name === 'pick') {
+    for (const abbr of ['IND', 'HOU']) {
+      const btn = page.locator('.team-btn', { has: page.locator('.team-abbr', { hasText: abbr }) }).first()
+      if (!(await btn.isDisabled())) problems.push(`ROLLING ${abbr} is still pickable after its kickoff`)
+      if (!(await btn.locator('.team-flag', { hasText: 'kicked off' }).count())) problems.push(`ROLLING ${abbr} has no "kicked off" flag`)
+    }
+    const dal = page.locator('.team-btn', { has: page.locator('.team-abbr', { hasText: 'DAL' }) }).first()
+    if (await dal.isDisabled()) problems.push('ROLLING DAL (Sunday) should still be pickable')
+  }
   const h1 = await page.locator('h1').first().textContent().catch(() => null)
   console.log(`${name.padEnd(10)} h1=${JSON.stringify(h1)}`)
 }

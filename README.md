@@ -54,15 +54,25 @@ bypassed:
 - `survivor_picks_playable` — a trigger rejects any pick for a team that has no game that
   week, so a bye-week team cannot be picked even by a client that skips the UI.
 
-The deadline is enforced by the database, not by the commissioner remembering to lock a
-week. `survivor_week_accepts_picks()` requires both an open week and `now() < locks_at`,
-so once the first kickoff arrives nobody can change a pick — no matter who is asleep.
-Moving a deadline in Admin → Weeks still takes effect immediately, which is the escape
-hatch when a week genuinely needs longer. Admins keep an unrestricted policy, because
-correcting somebody's pick after the fact is a real need.
+Deadlines are enforced by the database, not by the commissioner remembering to lock a
+week, and they roll:
 
-The pick board mirrors the same rule: when the countdown hits zero it stops offering the
-teams rather than letting a click fail.
+- **Each team locks at its own kickoff.** The trigger refuses a pick on a team whose game
+  has started.
+- **A pick on a team that has kicked off is frozen.** The same trigger refuses to move
+  it — nobody watches Thursday night lose and quietly switches to a Sunday team. That
+  rule is the whole reason rolling locks are fair.
+- **Everything still on the board locks at Sunday 1:00 PM Eastern**, the week's
+  `locks_at`. `survivor_week_accepts_picks()` requires an open week and `now() < locks_at`.
+
+Moving a week's deadline in Admin → Weeks still takes effect immediately, which is the
+escape hatch when a week genuinely needs longer. The commissioner is exempt from the two
+kickoff rules — correcting somebody's pick after the fact is a real need — but still
+cannot set a bye-week team.
+
+The pick board mirrors all of it: teams that have kicked off show as such and cannot be
+tapped, a frozen pick shows the board closed, and when the Sunday countdown hits zero the
+teams are withdrawn rather than letting a click fail.
 
 Signups run through the shared `handle_new_user` trigger, which accepts either the
 wrestling code or the survivor code and enrols survivor signups in the pool. An unknown
@@ -259,11 +269,10 @@ download Playwright's own build.
 
 - The invite code is in **Admin → Invite Code** (initial code: `SURVIVE2026`).
 - Week 1 ships open; the rest are upcoming.
-- Each week locks at **its own first kickoff**, so nobody can pick after seeing a result.
-  For most weeks that is Thursday night; Week 1 is Wednesday Sept 9, and Week 18 uses the
-  earliest slot the league printed (Sat Jan 9) until those games are scheduled. Any week's
-  deadline can be overridden in Admin → Weeks.
-- That deadline enforces itself. You still mark a week **locked** to reveal everyone's
+- Locks roll: **each team closes at its own kickoff**, and everything else closes at
+  **Sunday 1:00 PM ET**. A player whose team has kicked off is frozen for the week. The
+  Sunday deadline can be moved per week in Admin → Weeks.
+- All of that enforces itself. You still mark a week **locked** to reveal everyone's
   picks and **final** to score it, but picks close on the clock whether or not you are
   there.
 - Marking a week **final** automatically opens the next one.
