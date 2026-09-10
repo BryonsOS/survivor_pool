@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { supabase } from '../lib/supabase'
 import { actionErrorMessage } from '../lib/errors'
+import { MIN_PASSWORD_LENGTH, PASSWORD_RULE_TEXT, passwordProblem } from '../lib/passwords'
 import { useAuth } from '../context/AuthContext'
 import { usePool } from '../context/PoolContext'
 
@@ -121,12 +122,15 @@ export default function AccountPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
             autoComplete="new-password"
             required
           />
         </label>
-        <button className="btn btn-secondary" disabled={busy || password.length < 6}>
+        <p className={`muted small${password && passwordProblem(password) ? ' password-hint-unmet' : ''}`}>
+          {password ? passwordProblem(password) ?? 'Password looks good.' : PASSWORD_RULE_TEXT}
+        </p>
+        <button className="btn btn-secondary" disabled={busy || passwordProblem(password) !== null}>
           Update password
         </button>
       </form>

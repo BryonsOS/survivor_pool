@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { supabase } from '../lib/supabase'
+import { MIN_PASSWORD_LENGTH, PASSWORD_RULE_TEXT, passwordProblem } from '../lib/passwords'
 import { authErrorMessage } from '../lib/errors'
 
 type Mode = 'signin' | 'signup'
@@ -141,10 +142,17 @@ export default function AuthPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              minLength={6}
+              minLength={mode === 'signin' ? undefined : MIN_PASSWORD_LENGTH}
               required
             />
           </label>
+          {/* Only when joining: telling someone signing in that their existing
+              password is too short would be both useless and alarming. */}
+          {mode === 'signup' && (
+            <p className={`muted small${password && passwordProblem(password) ? ' password-hint-unmet' : ''}`}>
+              {password ? passwordProblem(password) ?? 'Password looks good.' : PASSWORD_RULE_TEXT}
+            </p>
+          )}
 
           {error && <div className="alert alert-error">{error}</div>}
           {notice && <div className="alert alert-ok">{notice}</div>}

@@ -554,3 +554,5 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .current-pick-logo { display: inline-flex; }
 .current-pick-logo .team-logo { width: 44px; height: 44px; }
 .current-pick-logo .team-abbr { font-size: 18px; }
+
+.password-hint-unmet { color: var(--amber); }
