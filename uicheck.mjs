@@ -3,6 +3,7 @@
  * endpoints in the browser, so every page renders against realistic mid-season
  * data without touching the live database. Not part of the app build.
  */
+import fs from 'node:fs'
 import { chromium } from 'playwright'
 
 const REF = 'cnchsowyukaioujfrups'
@@ -209,11 +210,18 @@ const TABLES = {
   ],
 }
 
+// Logos come from ESPN's CDN, unreachable here. Serve a stand-in so the layout
+// with an image in place is what gets checked, not only the text fallback.
+const LOGO_STUB = fs.readFileSync('/tmp/logo-stub.png')
+
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
 })
 const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } })
 const problems = []
+await context.route('**/teamlogos/**', (route) =>
+  route.fulfill({ status: 200, contentType: 'image/png', body: LOGO_STUB }),
+)
 
 await context.route('**/auth/v1/**', (route) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(SESSION) }),
@@ -290,12 +298,13 @@ for (const [path, name] of routes) {
   }
   await page.screenshot({ path: `${OUT}/ui-${name}.png`, fullPage: true })
   if (name === 'pick') {
-    for (const abbr of ['IND', 'HOU']) {
-      const btn = page.locator('.team-btn', { has: page.locator('.team-abbr', { hasText: abbr }) }).first()
+    // cards are found by team name: the abbreviation is replaced by a logo when one loads
+    for (const [abbr, name] of [['IND', 'Indianapolis Colts'], ['HOU', 'Houston Texans']]) {
+      const btn = page.locator('.team-btn', { has: page.locator('.team-name', { hasText: name }) }).first()
       if (!(await btn.isDisabled())) problems.push(`ROLLING ${abbr} is still pickable after its kickoff`)
       if (!(await btn.locator('.team-flag', { hasText: 'kicked off' }).count())) problems.push(`ROLLING ${abbr} has no "kicked off" flag`)
     }
-    const dal = page.locator('.team-btn', { has: page.locator('.team-abbr', { hasText: 'DAL' }) }).first()
+    const dal = page.locator('.team-btn', { has: page.locator('.team-name', { hasText: 'Dallas Cowboys' }) }).first()
     if (await dal.isDisabled()) problems.push('ROLLING DAL (Sunday) should still be pickable')
   }
   const h1 = await page.locator('h1').first().textContent().catch(() => null)

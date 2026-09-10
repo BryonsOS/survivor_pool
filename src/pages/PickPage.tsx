@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { usePool } from '../context/PoolContext'
 import PaymentNotice from '../components/PaymentNotice'
+import TeamLogo from '../components/TeamLogo'
 import { safeExternalUrl } from '../lib/payments'
 import { pickErrorMessage } from '../lib/errors'
 import { countdownText, formatDeadline, formatKickoff } from '../lib/time'
@@ -262,6 +263,11 @@ export default function PickPage() {
         <div className={`current-pick ${isOpen ? '' : 'locked'}`}>
           <div className="current-pick-label">{isOpen ? 'Current pick — change it any time before the deadline' : 'Locked pick'}</div>
           <div className="current-pick-team">
+            {!myPick.is_bye && myPick.team && (
+              <span className="current-pick-logo">
+                <TeamLogo abbr={myPick.team} size={44} />
+              </span>
+            )}
             {myPick.is_bye ? 'BYE week' : teams.find((t) => t.abbr === myPick.team)?.name ?? myPick.team}
           </div>
           {!myPick.is_bye && myPick.team && gameByTeam.get(myPick.team) && (
@@ -359,7 +365,9 @@ export default function PickPage() {
                                 : `Pick ${team.name} — ${matchup(team, game)}`
                         }
                       >
-                        <span className="team-abbr">{team.abbr}</span>
+                        <span className="team-mark">
+                          <TeamLogo abbr={team.abbr} name={team.name} />
+                        </span>
                         <span className="team-lines">
                           <span className="team-name">
                             {team.name}

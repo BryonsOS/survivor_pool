@@ -13,7 +13,7 @@
   [headers.values]
     # The app talks to exactly one Supabase project and loads fonts from Google.
     # Everything else is denied, so injected content has nowhere to send data.
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://cnchsowyukaioujfrups.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://a.espncdn.com; connect-src 'self' https://cnchsowyukaioujfrups.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'none'"
     # No one may frame the site — a framed pool page is a clickjacking target.
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"

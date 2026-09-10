@@ -544,3 +544,13 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .team-record { color: var(--text-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
 .team-btn.selected .team-record { color: var(--text); }
 .used-team-record { margin-left: 5px; font-weight: 400; letter-spacing: 0; color: var(--text-dim); }
+
+/* ---------- team logos ---------- */
+.team-mark { flex: 0 0 34px; display: flex; align-items: center; justify-content: center; min-height: 34px; }
+.team-mark .team-abbr { min-width: 0; }
+.team-logo { width: 32px; height: 32px; object-fit: contain; display: block; }
+.team-btn.used .team-logo { filter: grayscale(1); }
+.current-pick-team { display: flex; align-items: center; gap: 10px; }
+.current-pick-logo { display: inline-flex; }
+.current-pick-logo .team-logo { width: 44px; height: 44px; }
+.current-pick-logo .team-abbr { font-size: 18px; }
