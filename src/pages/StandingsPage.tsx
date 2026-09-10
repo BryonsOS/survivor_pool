@@ -1,13 +1,16 @@
 import { useAuth } from '../context/AuthContext'
 import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { usePool } from '../context/PoolContext'
+import { formatRecord, teamRecords } from '../lib/records'
 
 export default function StandingsPage() {
   useDocumentTitle('Standings')
 
   const { session } = useAuth()
   const userId = session!.user.id
-  const { pool, settings, loading, error } = usePool()
+  const { pool, settings, loading, error, results } = usePool()
+
+  const records = teamRecords(results)
 
   if (loading) return <div className="page-loading">Tallying survivors…</div>
   if (error) return <div className="page"><div className="alert alert-error">{error}</div></div>
@@ -88,8 +91,11 @@ export default function StandingsPage() {
               {row.teamsUsed.length > 0 ? (
                 <div className="used-teams">
                   {row.teamsUsed.map((team) => (
-                    <span key={team.abbr} className="used-team">
+                    <span key={team.abbr} className="used-team" title={team.name}>
                       {team.abbr}
+                      {formatRecord(records.get(team.abbr)) && (
+                        <span className="used-team-record">{formatRecord(records.get(team.abbr))}</span>
+                      )}
                     </span>
                   ))}
                 </div>

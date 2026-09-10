@@ -3,6 +3,7 @@ import { useDocumentTitle } from '../lib/useDocumentTitle'
 import { usePool } from '../context/PoolContext'
 import { formatDeadline } from '../lib/time'
 import { WEEK_STATUS_LABELS, type PickRow } from '../lib/types'
+import { formatRecord, teamRecords } from '../lib/records'
 
 /** Who took whom, biggest crowd first — the view that answers "did anyone else take them?" */
 function groupByTeam(weekPicks: PickRow[]): { team: string | null; userIds: string[] }[] {
@@ -40,6 +41,8 @@ export default function SeasonPage() {
     }
     return map
   }, [pool])
+  const records = useMemo(() => teamRecords(results), [results])
+
   const resultFor = useMemo(() => {
     const map = new Map<string, string>()
     for (const r of results) map.set(`${r.week}:${r.team}`, r.outcome)
@@ -98,6 +101,9 @@ export default function SeasonPage() {
                             <div className="pick-group-head">
                               <span className="pick-group-team">
                                 {group.team ? teamName.get(group.team) ?? group.team : 'BYE week'}
+                                {group.team && formatRecord(records.get(group.team)) && (
+                                  <span className="team-record"> {formatRecord(records.get(group.team))}</span>
+                                )}
                               </span>
                               <span className="pick-group-count">
                                 {group.userIds.length}

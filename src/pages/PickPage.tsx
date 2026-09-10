@@ -9,6 +9,7 @@ import { safeExternalUrl } from '../lib/payments'
 import { pickErrorMessage } from '../lib/errors'
 import { countdownText, formatDeadline, formatKickoff } from '../lib/time'
 import { formatChance, oddsAreFresh, teamWinChance } from '../lib/odds'
+import { formatRecord, teamRecords } from '../lib/records'
 import type { Game, Team } from '../lib/types'
 
 export default function PickPage() {
@@ -16,7 +17,7 @@ export default function PickPage() {
 
   const { session } = useAuth()
   const userId = session!.user.id
-  const { settings, teams, games, pool, picks, pickCounts, loading, error, reload } = usePool()
+  const { settings, teams, games, results, pool, picks, pickCounts, loading, error, reload } = usePool()
   const [now, setNow] = useState(() => Date.now())
   const [saving, setSaving] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -85,6 +86,10 @@ export default function PickPage() {
     )
   }, [games, week, now])
 
+  // Season records for every team, from the results the scores feed writes.
+  const records = useMemo(() => teamRecords(results), [results])
+  const recordOf = (abbr: string) => formatRecord(records.get(abbr))
+
   const oddsShown = useMemo(
     () => games.some((game) => game.week === week?.week && oddsAreFresh(game.odds_updated_at)),
     [games, week],
@@ -112,7 +117,8 @@ export default function PickPage() {
     const foe = home ? game.away : game.home
     const prefix = game.neutral_site ? 'vs' : home ? 'vs' : '@'
     const when = formatKickoff(game.kickoff_at)
-    return `${prefix} ${foe}${when ? ` · ${when}` : ' · time TBD'}`
+    const foeRecord = recordOf(foe)
+    return `${prefix} ${foe}${foeRecord ? ` (${foeRecord})` : ''}${when ? ` · ${when}` : ' · time TBD'}`
   }
 
   if (loading) return <div className="page-loading">Loading the board…</div>
@@ -355,7 +361,12 @@ export default function PickPage() {
                       >
                         <span className="team-abbr">{team.abbr}</span>
                         <span className="team-lines">
-                          <span className="team-name">{team.name}</span>
+                          <span className="team-name">
+                            {team.name}
+                            {recordOf(team.abbr) && (
+                              <span className="team-record"> {recordOf(team.abbr)}</span>
+                            )}
+                          </span>
                           <span className="team-matchup">{matchup(team, game)}</span>
                         </span>
                         {/* One right-hand column: a flag and two percentages side by

@@ -539,3 +539,8 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .announcement p { margin: 0; white-space: pre-line; line-height: 1.5; }
 .stack-label { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 13px; color: var(--text-dim); }
 .stack-label textarea, .stack-label input { font: inherit; color: var(--text); }
+
+/* ---------- season records ---------- */
+.team-record { color: var(--text-dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.team-btn.selected .team-record { color: var(--text); }
+.used-team-record { margin-left: 5px; font-weight: 400; letter-spacing: 0; color: var(--text-dim); }
